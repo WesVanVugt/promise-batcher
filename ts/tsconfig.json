@@ -1,0 +1,21 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "strict": true,
+        "declaration": true,
+        "sourceMap": false,
+        "forceConsistentCasingInFileNames": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../"
+    },
+    "include": [
+        "index.ts",
+        "test/index.ts",
+        "typings/**/*"
+    ],
+    "exclude": [
+    ]
+}
