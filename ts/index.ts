@@ -103,7 +103,7 @@ export class Batcher<I, O> {
      */
     public getResult(input: I): Promise<O> {
         const index = this._inputQueue.length;
-        debug("Queuing request at index ", index);
+        debug("Queuing request at index %O", index);
         this._inputQueue[index] = input;
         const deferred = defer<O>();
         this._outputQueue[index] = deferred;
