@@ -1,6 +1,6 @@
 {
   "name": "promise-batcher",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A module for batching individual promises to improve their collective efficiency.",
   "keywords": [
     "batching",
@@ -25,7 +25,7 @@
     "build": "npm run clean && npm run tslint && npm run tsc",
     "clean": "rm -rf index.js index.d.ts test",
     "test": "./node_modules/.bin/mocha test/*.js --reporter spec --colors",
-    "test-debug": "cross-env DEBUG=promise-batcher npm test",
+    "test-debug": "cross-env DEBUG=promise-batcher* npm test",
     "tsc": "tsc -p ts",
     "tslint": "tslint ts/**/*.ts"
   },
@@ -39,13 +39,13 @@
   },
   "devDependencies": {
     "@types/chai-as-promised": "^7.1.0",
-    "@types/debug": "0.0.29",
+    "@types/debug": "^0.0.30",
     "@types/mocha": "^2.2.43",
     "@types/node": "^6.0.88",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^5.0.5",
-    "mocha": "^3.5.3",
+    "mocha": "^4.0.1",
     "tslint": "^5.7.0",
     "typescript": "^2.5.3"
   },

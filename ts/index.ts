@@ -1,7 +1,5 @@
 import * as Debug from "debug";
-export const debug = Debug("promise-batcher");
-
-const DEBUG_PREFIX: string = "[promise-batcher] ";
+const debug = Debug("promise-batcher");
 
 interface Deferred<T> {
     resolve: (result?: T) => void;
@@ -105,7 +103,7 @@ export class Batcher<I, O> {
      */
     public getResult(input: I): Promise<O> {
         const index = this._inputQueue.length;
-        debug(`${DEBUG_PREFIX}Queuing request at index ${index}.`);
+        debug("Queuing request at index %O", index);
         this._inputQueue[index] = input;
         const deferred = defer<O>();
         this._outputQueue[index] = deferred;
@@ -130,7 +128,7 @@ export class Batcher<I, O> {
         }
         // If the queue has reached the maximum batch size, start it immediately
         if (this._inputQueue.length >= this._maxBatchSize) {
-            debug(`${DEBUG_PREFIX}Queue reached maxBatchSize, launching immediately.`);
+            debug("Queue reached maxBatchSize, launching immediately.");
             if (this._waitTimeout) {
                 clearTimeout(this._waitTimeout);
                 this._waitTimeout = undefined;
@@ -144,7 +142,7 @@ export class Batcher<I, O> {
         }
         // Run the batch, but with a delay
         this._waiting = true;
-        debug(`${DEBUG_PREFIX}Running in ${this._queuingDelay}ms (thresholdIndex ${thresholdIndex}).`);
+        debug("Running in %Oms (thresholdIndex %O).", this._queuingDelay, thresholdIndex);
         // Tests showed that nextTick would commonly run before promises could resolve.
         // SetImmediate would run later than setTimeout as well.
         this._waitTimeout = setTimeout(() => {
@@ -169,7 +167,7 @@ export class Batcher<I, O> {
                 resultPromise.then(() => {
                     this._runImmediately();
                 }).catch((err) => {
-                    debug(DEBUG_PREFIX + "Caught error in delayFunction. Rejecting promises.");
+                    debug("Caught error in delayFunction. Rejecting promises.");
                     this._inputQueue.length = 0;
                     const promises = this._outputQueue.splice(0, this._outputQueue.length);
                     promises.forEach((promise) => {
@@ -179,7 +177,7 @@ export class Batcher<I, O> {
                 });
                 return;
             }
-            debug(DEBUG_PREFIX + "Bypassing batch delay.");
+            debug("Bypassing batch delay.");
         }
         this._runImmediately();
     }
@@ -191,7 +189,7 @@ export class Batcher<I, O> {
         const inputs = this._inputQueue.splice(0, this._maxBatchSize);
         const outputPromises = this._outputQueue.splice(0, this._maxBatchSize);
 
-        debug(`${DEBUG_PREFIX}Running batch of ${inputs.length}.`);
+        debug("Running batch of %O", inputs.length);
         let batchPromise: Promise<Array<O | Error>>;
         try {
             batchPromise = this._batchingFunction.call(this, inputs);
@@ -208,7 +206,7 @@ export class Batcher<I, O> {
             if (!Array.isArray(outputs)) {
                 throw new Error("Invalid type returned from batching function.");
             }
-            debug(`${DEBUG_PREFIX}Promise resolved.`);
+            debug("Promise resolved.");
             if (outputs.length !== outputPromises.length) {
                 throw new Error("Batching function output length does not equal the input length.");
             }

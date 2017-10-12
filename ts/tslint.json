@@ -5,6 +5,7 @@
             false
         ],
         "variable-name": [
+            true,
             "allow-leading-underscore"
         ]
     }
