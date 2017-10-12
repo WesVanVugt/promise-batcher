@@ -3,7 +3,7 @@ import { expect } from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as Debug from "debug";
 import { Batcher, BatcherOptions } from "../index";
-const debug = Debug("promise-batcher");
+const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Verify that the types needed can be imported
