@@ -1,6 +1,3 @@
-/// <reference types="debug" />
-import * as Debug from "debug";
-export declare const debug: Debug.IDebugger;
 export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.

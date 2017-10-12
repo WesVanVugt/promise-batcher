@@ -13,7 +13,7 @@ const chai_1 = require("chai");
 const chaiAsPromised = require("chai-as-promised");
 const Debug = require("debug");
 const index_1 = require("../index");
-const debug = Debug("promise-batcher");
+const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 // Verify that the types needed can be imported
 const typingImportTest = undefined;
