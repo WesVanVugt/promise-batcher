@@ -35,7 +35,8 @@
     "node": ">=4.0.0"
   },
   "dependencies": {
-    "debug": "^3.1.0"
+    "debug": "^3.1.0",
+    "defer-promise": "^1.0.1"
   },
   "devDependencies": {
     "@types/chai-as-promised": "^7.1.0",

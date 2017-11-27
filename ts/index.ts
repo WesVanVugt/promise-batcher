@@ -1,20 +1,6 @@
 import * as Debug from "debug";
+import defer = require("defer-promise");
 const debug = Debug("promise-batcher");
-
-interface Deferred<T> {
-    resolve: (result?: T) => void;
-    reject: (err: any) => void;
-    promise: Promise<T>;
-}
-
-function defer<T>(): Deferred<T> {
-    const o: any = {};
-    o.promise = new Promise((resolve, reject) => {
-        o.resolve = resolve;
-        o.reject = reject;
-    });
-    return o;
-}
 
 function isNull(val: any): val is null | undefined {
     return val === undefined || val === null;
