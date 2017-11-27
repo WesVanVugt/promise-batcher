@@ -2,12 +2,12 @@ import * as chai from "chai";
 import { expect } from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as Debug from "debug";
-import { Batcher, BatcherOptions } from "../index";
+import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatchingResult } from "../index";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Verify that the types needed can be imported
-const typingImportTest: BatcherOptions<any, any> = undefined as any;
+const typingImportTest: BatcherOptions<any, any> | BatchingResult<any> = undefined as any;
 if (typingImportTest) {
     // do nothing
 }
@@ -254,6 +254,81 @@ describe("Batcher", () => {
             ].map((promise) => promise.then(() => Date.now() - start))).then((results) => {
                 expectTimes(results, [1, 2], "Timing Results");
             });
+        });
+    });
+    describe("Retries", () => {
+        it("Full", async () => {
+            let batchNumber = 0;
+            let runCount = 0;
+            const batcher = new Batcher<number, number>({
+                batchingFunction: async (inputs) => {
+                    runCount++;
+                    await wait(tick);
+                    batchNumber++;
+                    if (batchNumber < 2) {
+                        return inputs.map(() => BATCHER_RETRY_TOKEN);
+                    }
+                    return inputs.map((input) => input + 1);
+                },
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2].map(async (input) => {
+                    const output = await batcher.getResult(input);
+                    expect(output).to.equal(input + 1, "getResult output");
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [2, 2], "Timing Results");
+            expect(runCount).to.equal(2, "runCount");
+        });
+        it("Partial", async () => {
+            let batchNumber = 0;
+            let runCount = 0;
+            const batcher = new Batcher<number, number>({
+                batchingFunction: async (inputs) => {
+                    runCount++;
+                    await wait(tick);
+                    batchNumber++;
+                    return inputs.map((input, index) => {
+                        return batchNumber < 2 && index < 1 ? BATCHER_RETRY_TOKEN : input + 1;
+                    });
+                },
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2].map(async (input) => {
+                    const output = await batcher.getResult(input);
+                    expect(output).to.equal(input + 1, "getResult output");
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [2, 1], "Timing Results");
+            expect(runCount).to.equal(2, "runCount");
+        });
+        it("Ordering", async () => {
+            const batchInputs: number[][] = [];
+            const batcher = new Batcher<number, number>({
+                batchingFunction: async (inputs) => {
+                    batchInputs.push(inputs);
+                    await wait(tick);
+                    return inputs.map((input, index) => {
+                        return batchInputs.length < 2 && index < 2 ? BATCHER_RETRY_TOKEN : input + 1;
+                    });
+                },
+                maxBatchSize: 3,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2, 3, 4].map(async (input) => {
+                    const output = await batcher.getResult(input);
+                    expect(output).to.equal(input + 1, "getResult output");
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [2, 2, 1, 2], "Timing Results");
+            expect(batchInputs).to.deep.equal([[1, 2, 3], [1, 2, 4]], "batchInputs");
         });
     });
     describe("Error Handling", () => {
