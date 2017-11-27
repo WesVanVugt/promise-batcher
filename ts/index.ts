@@ -20,6 +20,10 @@ function isNull(val: any): val is null | undefined {
     return val === undefined || val === null;
 }
 
+export const BATCHER_RETRY_TOKEN: symbol = Symbol("Batcher Retry Token");
+
+export type BatchingResult<T> = T | Error | symbol;
+
 export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.
@@ -48,7 +52,7 @@ export interface BatcherOptions<I, O> {
      * The request and response arrays must be of equal length. To reject an individual request, return an Error object
      * (or class which extends Error) at the corresponding element in the response array.
      */
-    batchingFunction(inputs: I[]): Array<O | Error> | PromiseLike<Array<O | Error>>;
+    batchingFunction(inputs: I[]): Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
     /**
      * A function which can delay a batch by returning a promise which resolves when the batch should be run.
      * If the function does not return a promise, no delay will be applied.
@@ -63,7 +67,7 @@ export class Batcher<I, O> {
     private _inputQueue: I[] = [];
     private _outputQueue: Array<Deferred<O>> = [];
     private _delayFunction?: () => PromiseLike<void> | undefined | null | void;
-    private _batchingFunction: (input: I[]) => Array<O | Error> | PromiseLike<Array<O | Error>>;
+    private _batchingFunction: (input: I[]) => Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
     private _waitTimeout?: any;
     private _waiting: boolean = false;
     private _activePromiseCount: number = 0;
@@ -190,7 +194,7 @@ export class Batcher<I, O> {
         const outputPromises = this._outputQueue.splice(0, this._maxBatchSize);
 
         debug("Running batch of %O", inputs.length);
-        let batchPromise: Promise<Array<O | Error>>;
+        let batchPromise: Promise<Array<BatchingResult<O>>>;
         try {
             batchPromise = this._batchingFunction.call(this, inputs);
             if (!(batchPromise instanceof Promise)) {
@@ -210,14 +214,23 @@ export class Batcher<I, O> {
             if (outputs.length !== outputPromises.length) {
                 throw new Error("Batching function output length does not equal the input length.");
             }
+            const retryInputs: I[] = [];
+            const retryPromises: Array<Deferred<O>> = [];
             outputPromises.forEach((promise, index) => {
                 const output = outputs[index];
-                if (output instanceof Error) {
+                if (output === BATCHER_RETRY_TOKEN) {
+                    retryInputs.push(inputs[index]);
+                    retryPromises.push(promise);
+                } else if (output instanceof Error) {
                     promise.reject(output);
                 } else {
-                    promise.resolve(output);
+                    promise.resolve(output as O);
                 }
             });
+            if (retryPromises.length) {
+                this._inputQueue.unshift(...retryInputs);
+                this._outputQueue.unshift(...retryPromises);
+            }
         }).catch((err) => {
             outputPromises.forEach((promise) => {
                 promise.reject(err);
