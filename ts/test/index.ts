@@ -331,6 +331,88 @@ describe("Batcher", () => {
             expect(batchInputs).to.deep.equal([[1, 2, 3], [1, 2, 4]], "batchInputs");
         });
     });
+    describe("Send Method", () => {
+        it("Single Use", async () => {
+            let runCount = 0;
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => {
+                    runCount++;
+                    await wait(tick);
+                    return inputs;
+                },
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2, 3].map(async (_, index) => {
+                    const promise = batcher.getResult(undefined);
+                    if (index === 1) {
+                        expect(runCount).to.equal(0, "runCount before");
+                        batcher.send();
+                        expect(runCount).to.equal(1, "runCount after");
+                    }
+                    await promise;
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [1, 1, 3], "Timing Results");
+        });
+        it("Effect Delayed By queuingThreshold", async () => {
+            let runCount = 0;
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => {
+                    runCount++;
+                    await wait(tick);
+                    return inputs;
+                },
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2, 3].map(async (_, index) => {
+                    const promise = batcher.getResult(undefined);
+                    if (index === 1) {
+                        expect(runCount).to.equal(0, "runCount before");
+                        batcher.send();
+                        expect(runCount).to.equal(1, "runCount after");
+                    } else if (index === 2) {
+                        batcher.send();
+                        expect(runCount).to.equal(1, "runCount after second");
+                    }
+                    await promise;
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [1, 1, 2], "Timing Results");
+        });
+        it("Effect Delayed By delayFunction", async () => {
+            // This tests that the effect of the send method still obeys the delayFunction and that the effect
+            // lasts even after a previous batch has been delayed by the delayFunction.
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => {
+                    await wait(tick);
+                    return inputs;
+                },
+                delayFunction: () => wait(tick),
+                maxBatchSize: 2,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2, 3].map(async (_, index) => {
+                    const promise = batcher.getResult(undefined);
+                    if (index === 2) {
+                        batcher.send();
+                    }
+                    await promise;
+                    return Date.now() - start;
+                }),
+            );
+            expectTimes(results, [2, 2, 4], "Timing Results");
+        });
+    });
     describe("Error Handling", () => {
         it("Single Rejection", () => {
             const batcher = new Batcher<string, undefined>({

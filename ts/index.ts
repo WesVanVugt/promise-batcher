@@ -57,6 +57,7 @@ export class Batcher<I, O> {
     private _waitTimeout?: any;
     private _waiting: boolean = false;
     private _activePromiseCount: number = 0;
+    private _immediateCount: number = 0;
 
     constructor(options: BatcherOptions<I, O>) {
         this._batchingFunction = options.batchingFunction;
@@ -102,6 +103,17 @@ export class Batcher<I, O> {
     }
 
     /**
+     * Triggers a batch to run, bypassing the queuingDelay while respecting other imposed delays.
+     */
+    public send(): void {
+        debug("Send triggered.");
+        // no inputs?
+        // delayed?
+        this._immediateCount = this._inputQueue.length;
+        this._trigger();
+    }
+
+    /**
      * Triggers a batch to run, adhering to the maxBatchSize, queueingThresholds, and queuingDelay
      */
     private _trigger(): void {
@@ -117,8 +129,8 @@ export class Batcher<I, O> {
             return;
         }
         // If the queue has reached the maximum batch size, start it immediately
-        if (this._inputQueue.length >= this._maxBatchSize) {
-            debug("Queue reached maxBatchSize, launching immediately.");
+        if (this._inputQueue.length >= this._maxBatchSize || this._immediateCount) {
+            debug("Running immediately.");
             if (this._waitTimeout) {
                 clearTimeout(this._waitTimeout);
                 this._waitTimeout = undefined;
@@ -178,6 +190,9 @@ export class Batcher<I, O> {
     private _runImmediately(): void {
         const inputs = this._inputQueue.splice(0, this._maxBatchSize);
         const outputPromises = this._outputQueue.splice(0, this._maxBatchSize);
+        if (this._immediateCount) {
+            this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
+        }
 
         debug("Running batch of %O", inputs.length);
         let batchPromise: Promise<Array<BatchingResult<O>>>;
@@ -214,6 +229,10 @@ export class Batcher<I, O> {
                 }
             });
             if (retryPromises.length) {
+                debug("Adding %O requests to the queue to retry.", retryPromises.length);
+                if (this._immediateCount) {
+                    this._immediateCount += retryPromises.length;
+                }
                 this._inputQueue.unshift(...retryInputs);
                 this._outputQueue.unshift(...retryPromises);
             }
