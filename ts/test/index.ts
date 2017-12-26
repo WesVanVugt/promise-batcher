@@ -2,12 +2,12 @@ import * as chai from "chai";
 import { expect } from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as Debug from "debug";
-import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatchingResult } from "../index";
+import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "../index";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Verify that the types needed can be imported
-const typingImportTest: BatcherOptions<any, any> | BatchingResult<any> = undefined as any;
+const typingImportTest: BatcherOptions<any, any> | BatchingResult<any> | BatcherToken = undefined as any;
 if (typingImportTest) {
     // do nothing
 }

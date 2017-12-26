@@ -6,9 +6,15 @@ function isNull(val: any): val is null | undefined {
     return val === undefined || val === null;
 }
 
-export const BATCHER_RETRY_TOKEN: symbol = Symbol("Batcher Retry Token");
+export class BatcherToken { }
 
-export type BatchingResult<T> = T | Error | symbol;
+/**
+ * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
+ * into the the head of the queue.
+ */
+export const BATCHER_RETRY_TOKEN: BatcherToken = new BatcherToken();
+
+export type BatchingResult<T> = T | Error | BatcherToken;
 
 export interface BatcherOptions<I, O> {
     /**
@@ -46,6 +52,7 @@ export interface BatcherOptions<I, O> {
     delayFunction?(): PromiseLike<void> | undefined | null | void;
 }
 
+// tslint:disable-next-line:max-classes-per-file
 export class Batcher<I, O> {
     private _maxBatchSize: number = Infinity;
     private _queuingDelay: number = 1;
