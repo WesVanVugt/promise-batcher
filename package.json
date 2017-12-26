@@ -27,7 +27,7 @@
         "clean": "rm -rf index.js index.d.ts test",
         "test": "./node_modules/.bin/mocha test/*.js --reporter spec --colors",
         "test-debug": "cross-env DEBUG=promise-batcher* npm test",
-        "tsc": "tsc -p ts",
+        "tsc": "tsc",
         "tslint": "tslint ts/**/*.ts"
     },
     "main": "index.js",
