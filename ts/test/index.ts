@@ -412,6 +412,32 @@ describe("Batcher", () => {
             );
             expectTimes(results, [2, 2, 4], "Timing Results");
         });
+        it("Interaction With Retries", async () => {
+            // This tests that the effect of the send method lasts even after a retry
+            let runCount = 0;
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => {
+                    runCount++;
+                    await wait(tick);
+                    return runCount === 1 ? inputs.map(() => BATCHER_RETRY_TOKEN) : inputs;
+                },
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = await Promise.all(
+                [1, 2, 3].map(async (_, index) => {
+                    const promise = batcher.getResult(undefined);
+                    if (index >= 1) {
+                        batcher.send();
+                    }
+                    await promise;
+                    return Date.now() - start;
+                }),
+            );
+            expect(runCount).to.equal(2);
+            expectTimes(results, [2, 2, 2], "Timing Results");
+        });
     });
     describe("Error Handling", () => {
         it("Single Rejection", () => {
