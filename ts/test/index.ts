@@ -435,7 +435,7 @@ describe("Batcher", () => {
                     return Date.now() - start;
                 }),
             );
-            expect(runCount).to.equal(2);
+            expect(runCount).to.equal(2, "runCount");
             expectTimes(results, [2, 2, 2], "Timing Results");
         });
     });
