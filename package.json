@@ -1,6 +1,6 @@
 {
     "name": "promise-batcher",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "description": "A module for batching individual promises to improve their collective efficiency.",
     "keywords": [
         "batching",
