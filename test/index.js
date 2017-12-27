@@ -256,6 +256,176 @@ describe("Batcher", () => {
             });
         });
     });
+    describe("Retries", () => {
+        it("Full", () => __awaiter(this, void 0, void 0, function* () {
+            let batchNumber = 0;
+            let runCount = 0;
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    runCount++;
+                    yield wait(tick);
+                    batchNumber++;
+                    if (batchNumber < 2) {
+                        return inputs.map(() => index_1.BATCHER_RETRY_TOKEN);
+                    }
+                    return inputs.map((input) => input + 1);
+                }),
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2].map((input) => __awaiter(this, void 0, void 0, function* () {
+                const output = yield batcher.getResult(input);
+                chai_1.expect(output).to.equal(input + 1, "getResult output");
+                return Date.now() - start;
+            })));
+            expectTimes(results, [2, 2], "Timing Results");
+            chai_1.expect(runCount).to.equal(2, "runCount");
+        }));
+        it("Partial", () => __awaiter(this, void 0, void 0, function* () {
+            let batchNumber = 0;
+            let runCount = 0;
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    runCount++;
+                    yield wait(tick);
+                    batchNumber++;
+                    return inputs.map((input, index) => {
+                        return batchNumber < 2 && index < 1 ? index_1.BATCHER_RETRY_TOKEN : input + 1;
+                    });
+                }),
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2].map((input) => __awaiter(this, void 0, void 0, function* () {
+                const output = yield batcher.getResult(input);
+                chai_1.expect(output).to.equal(input + 1, "getResult output");
+                return Date.now() - start;
+            })));
+            expectTimes(results, [2, 1], "Timing Results");
+            chai_1.expect(runCount).to.equal(2, "runCount");
+        }));
+        it("Ordering", () => __awaiter(this, void 0, void 0, function* () {
+            const batchInputs = [];
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    batchInputs.push(inputs);
+                    yield wait(tick);
+                    return inputs.map((input, index) => {
+                        return batchInputs.length < 2 && index < 2 ? index_1.BATCHER_RETRY_TOKEN : input + 1;
+                    });
+                }),
+                maxBatchSize: 3,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2, 3, 4].map((input) => __awaiter(this, void 0, void 0, function* () {
+                const output = yield batcher.getResult(input);
+                chai_1.expect(output).to.equal(input + 1, "getResult output");
+                return Date.now() - start;
+            })));
+            expectTimes(results, [2, 2, 1, 2], "Timing Results");
+            chai_1.expect(batchInputs).to.deep.equal([[1, 2, 3], [1, 2, 4]], "batchInputs");
+        }));
+    });
+    describe("Send Method", () => {
+        it("Single Use", () => __awaiter(this, void 0, void 0, function* () {
+            let runCount = 0;
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    runCount++;
+                    yield wait(tick);
+                    return inputs;
+                }),
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2, 3].map((_, index) => __awaiter(this, void 0, void 0, function* () {
+                const promise = batcher.getResult(undefined);
+                if (index === 1) {
+                    chai_1.expect(runCount).to.equal(0, "runCount before");
+                    batcher.send();
+                    chai_1.expect(runCount).to.equal(1, "runCount after");
+                }
+                yield promise;
+                return Date.now() - start;
+            })));
+            expectTimes(results, [1, 1, 3], "Timing Results");
+        }));
+        it("Effect Delayed By queuingThreshold", () => __awaiter(this, void 0, void 0, function* () {
+            let runCount = 0;
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    runCount++;
+                    yield wait(tick);
+                    return inputs;
+                }),
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2, 3].map((_, index) => __awaiter(this, void 0, void 0, function* () {
+                const promise = batcher.getResult(undefined);
+                if (index === 1) {
+                    chai_1.expect(runCount).to.equal(0, "runCount before");
+                    batcher.send();
+                    chai_1.expect(runCount).to.equal(1, "runCount after");
+                }
+                else if (index === 2) {
+                    batcher.send();
+                    chai_1.expect(runCount).to.equal(1, "runCount after second");
+                }
+                yield promise;
+                return Date.now() - start;
+            })));
+            expectTimes(results, [1, 1, 2], "Timing Results");
+        }));
+        it("Effect Delayed By delayFunction", () => __awaiter(this, void 0, void 0, function* () {
+            // This tests that the effect of the send method still obeys the delayFunction and that the effect
+            // lasts even after a previous batch has been delayed by the delayFunction.
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    yield wait(tick);
+                    return inputs;
+                }),
+                delayFunction: () => wait(tick),
+                maxBatchSize: 2,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2, 3].map((_, index) => __awaiter(this, void 0, void 0, function* () {
+                const promise = batcher.getResult(undefined);
+                if (index === 2) {
+                    batcher.send();
+                }
+                yield promise;
+                return Date.now() - start;
+            })));
+            expectTimes(results, [2, 2, 4], "Timing Results");
+        }));
+        it("Interaction With Retries", () => __awaiter(this, void 0, void 0, function* () {
+            // This tests that the effect of the send method lasts even after a retry
+            let runCount = 0;
+            const batcher = new index_1.Batcher({
+                batchingFunction: (inputs) => __awaiter(this, void 0, void 0, function* () {
+                    runCount++;
+                    yield wait(tick);
+                    return runCount === 1 ? inputs.map(() => index_1.BATCHER_RETRY_TOKEN) : inputs;
+                }),
+                queuingDelay: tick,
+                queuingThresholds: [1, Infinity],
+            });
+            const start = Date.now();
+            const results = yield Promise.all([1, 2, 3].map((_, index) => __awaiter(this, void 0, void 0, function* () {
+                const promise = batcher.getResult(undefined);
+                if (index >= 1) {
+                    batcher.send();
+                }
+                yield promise;
+                return Date.now() - start;
+            })));
+            chai_1.expect(runCount).to.equal(2, "runCount");
+            expectTimes(results, [2, 2, 2], "Timing Results");
+        }));
+    });
     describe("Error Handling", () => {
         it("Single Rejection", () => {
             const batcher = new index_1.Batcher({

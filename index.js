@@ -1,18 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Debug = require("debug");
+const defer = require("defer-promise");
 const debug = Debug("promise-batcher");
-function defer() {
-    const o = {};
-    o.promise = new Promise((resolve, reject) => {
-        o.resolve = resolve;
-        o.reject = reject;
-    });
-    return o;
-}
 function isNull(val) {
     return val === undefined || val === null;
 }
+class BatcherToken {
+}
+exports.BatcherToken = BatcherToken;
+/**
+ * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
+ * into the the head of the queue.
+ */
+exports.BATCHER_RETRY_TOKEN = new BatcherToken();
+// tslint:disable-next-line:max-classes-per-file
 class Batcher {
     constructor(options) {
         this._maxBatchSize = Infinity;
@@ -21,6 +23,7 @@ class Batcher {
         this._outputQueue = [];
         this._waiting = false;
         this._activePromiseCount = 0;
+        this._immediateCount = 0;
         this._batchingFunction = options.batchingFunction;
         this._delayFunction = options.delayFunction;
         if (Array.isArray(options.queuingThresholds)) {
@@ -55,12 +58,22 @@ class Batcher {
      */
     getResult(input) {
         const index = this._inputQueue.length;
-        debug("Queuing request at index ", index);
+        debug("Queuing request at index %O", index);
         this._inputQueue[index] = input;
         const deferred = defer();
         this._outputQueue[index] = deferred;
         this._trigger();
         return deferred.promise;
+    }
+    /**
+     * Triggers a batch to run, bypassing the queuingDelay while respecting other imposed delays.
+     */
+    send() {
+        debug("Send triggered.");
+        // no inputs?
+        // delayed?
+        this._immediateCount = this._inputQueue.length;
+        this._trigger();
     }
     /**
      * Triggers a batch to run, adhering to the maxBatchSize, queueingThresholds, and queuingDelay
@@ -76,8 +89,8 @@ class Batcher {
             return;
         }
         // If the queue has reached the maximum batch size, start it immediately
-        if (this._inputQueue.length >= this._maxBatchSize) {
-            debug("Queue reached maxBatchSize, launching immediately.");
+        if (this._inputQueue.length >= this._maxBatchSize || this._immediateCount) {
+            debug("Running immediately.");
             if (this._waitTimeout) {
                 clearTimeout(this._waitTimeout);
                 this._waitTimeout = undefined;
@@ -136,6 +149,9 @@ class Batcher {
     _runImmediately() {
         const inputs = this._inputQueue.splice(0, this._maxBatchSize);
         const outputPromises = this._outputQueue.splice(0, this._maxBatchSize);
+        if (this._immediateCount) {
+            this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
+        }
         debug("Running batch of %O", inputs.length);
         let batchPromise;
         try {
@@ -157,15 +173,29 @@ class Batcher {
             if (outputs.length !== outputPromises.length) {
                 throw new Error("Batching function output length does not equal the input length.");
             }
+            const retryInputs = [];
+            const retryPromises = [];
             outputPromises.forEach((promise, index) => {
                 const output = outputs[index];
-                if (output instanceof Error) {
+                if (output === exports.BATCHER_RETRY_TOKEN) {
+                    retryInputs.push(inputs[index]);
+                    retryPromises.push(promise);
+                }
+                else if (output instanceof Error) {
                     promise.reject(output);
                 }
                 else {
                     promise.resolve(output);
                 }
             });
+            if (retryPromises.length) {
+                debug("Adding %O requests to the queue to retry.", retryPromises.length);
+                if (this._immediateCount) {
+                    this._immediateCount += retryPromises.length;
+                }
+                this._inputQueue.unshift(...retryInputs);
+                this._outputQueue.unshift(...retryPromises);
+            }
         }).catch((err) => {
             outputPromises.forEach((promise) => {
                 promise.reject(err);

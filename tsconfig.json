@@ -9,13 +9,12 @@
         "forceConsistentCasingInFileNames": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../"
+        "outDir": "."
     },
     "include": [
-        "index.ts",
-        "test/index.ts",
-        "typings/**/*"
+        "ts/index.ts",
+        "ts/test/index.ts",
+        "ts/typings/**/*"
     ],
-    "exclude": [
-    ]
+    "exclude": []
 }
