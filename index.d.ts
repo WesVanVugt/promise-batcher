@@ -1,3 +1,11 @@
+export declare class BatcherToken {
+}
+/**
+ * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
+ * into the the head of the queue.
+ */
+export declare const BATCHER_RETRY_TOKEN: BatcherToken;
+export declare type BatchingResult<T> = T | Error | BatcherToken;
 export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.
@@ -26,7 +34,7 @@ export interface BatcherOptions<I, O> {
      * The request and response arrays must be of equal length. To reject an individual request, return an Error object
      * (or class which extends Error) at the corresponding element in the response array.
      */
-    batchingFunction(inputs: I[]): Array<O | Error> | PromiseLike<Array<O | Error>>;
+    batchingFunction(inputs: I[]): Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
     /**
      * A function which can delay a batch by returning a promise which resolves when the batch should be run.
      * If the function does not return a promise, no delay will be applied.
@@ -44,11 +52,16 @@ export declare class Batcher<I, O> {
     private _waitTimeout?;
     private _waiting;
     private _activePromiseCount;
+    private _immediateCount;
     constructor(options: BatcherOptions<I, O>);
     /**
      * Returns a promise which resolves or rejects with the individual result returned from the batching function.
      */
     getResult(input: I): Promise<O>;
+    /**
+     * Triggers a batch to run, bypassing the queuingDelay while respecting other imposed delays.
+     */
+    send(): void;
     /**
      * Triggers a batch to run, adhering to the maxBatchSize, queueingThresholds, and queuingDelay
      */
