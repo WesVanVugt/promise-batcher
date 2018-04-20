@@ -1,5 +1,5 @@
 import * as Debug from "debug";
-import defer = require("defer-promise");
+import defer = require("p-defer");
 const debug = Debug("promise-batcher");
 
 function isNull(val: any): val is null | undefined {

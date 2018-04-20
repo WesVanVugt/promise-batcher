@@ -102,4 +102,4 @@ A tool for combining requests.
 
 ## License
 
-[MIT](https://github.com/baudzilla/promise-batcher/blob/master/LICENSE).
+[MIT](https://github.com/baudzilla/promise-batcher/blob/master/LICENSE)
