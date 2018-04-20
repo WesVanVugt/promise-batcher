@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Debug = require("debug");
-const defer = require("defer-promise");
+const defer = require("p-defer");
 const debug = Debug("promise-batcher");
 function isNull(val) {
     return val === undefined || val === null;

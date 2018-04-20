@@ -4,7 +4,7 @@ interface Deferred<T> {
     reject: (reason?: any) => void;
 }
 
-declare module "defer-promise" {
+declare module "p-defer" {
     function defer<T>(): Deferred<T>;
     export = defer;
 }
