@@ -16,8 +16,8 @@
         ]
     },
     "include": [
+        "typings/**/*",
         "ts/index.ts",
-        "ts/typings/**/*"
     ],
     "exclude": []
 }

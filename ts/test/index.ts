@@ -1,7 +1,7 @@
-import * as chai from "chai";
+import chai from "chai";
 import { expect } from "chai";
-import * as chaiAsPromised from "chai-as-promised";
-import * as Debug from "debug";
+import chaiAsPromised from "chai-as-promised";
+import Debug from "debug";
 import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "../index";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
