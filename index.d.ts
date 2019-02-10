@@ -65,13 +65,13 @@ export declare class Batcher<I, O> {
     /**
      * Triggers a batch to run, adhering to the maxBatchSize, queueingThresholds, and queuingDelay
      */
-    private _trigger();
+    private _trigger;
     /**
      * Runs the batch, while respecting delays imposed by the supplied delayFunction
      */
-    private _run();
+    private _run;
     /**
      * Runs the batch immediately without further delay
      */
-    private _runImmediately();
+    private _runImmediately;
 }
