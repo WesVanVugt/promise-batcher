@@ -1,5 +1,5 @@
 import Debug from "debug";
-import defer, { Deferred } from "p-defer";
+import defer, { DeferredPromise } from "p-defer";
 const debug = Debug("promise-batcher");
 
 function isNull(val: any): val is null | undefined {
@@ -58,7 +58,7 @@ export class Batcher<I, O> {
     private _queuingDelay: number = 1;
     private _queuingThresholds: number[];
     private _inputQueue: I[] = [];
-    private _outputQueue: Array<Deferred<O>> = [];
+    private _outputQueue: Array<DeferredPromise<O>> = [];
     private _delayFunction?: () => PromiseLike<void> | undefined | null | void;
     private _batchingFunction: (input: I[]) => Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
     private _waitTimeout?: any;
@@ -222,7 +222,7 @@ export class Batcher<I, O> {
                     throw new Error("Batching function output length does not equal the input length.");
                 }
                 const retryInputs: I[] = [];
-                const retryPromises: Array<Deferred<O>> = [];
+                const retryPromises: Array<DeferredPromise<O>> = [];
                 outputPromises.forEach((promise, index) => {
                     const output = outputs[index];
                     if (output === BATCHER_RETRY_TOKEN) {
