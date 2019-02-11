@@ -61,7 +61,7 @@ export class Batcher<I, O> {
     private _outputQueue: Array<DeferredPromise<O>> = [];
     private _delayFunction?: () => PromiseLike<void> | undefined | null | void;
     private _batchingFunction: (input: I[]) => Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
-    private _waitTimeout?: any;
+    private _waitTimeout?: NodeJS.Timeout;
     private _waiting: boolean = false;
     private _activePromiseCount: number = 0;
     private _immediateCount: number = 0;

@@ -2,6 +2,7 @@ import chai from "chai";
 import { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import Debug from "debug";
+import timeSpan from "time-span";
 import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "../index";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
@@ -66,12 +67,12 @@ describe("Batcher", () => {
             },
         });
         const inputs = [1, 5, 9];
-        const start: number = Date.now();
+        const end = timeSpan();
         return Promise.all(
             inputs.map((input) => {
                 return batcher.getResult(input).then((output) => {
                     expect(output).to.equal(String(input), "Outputs");
-                    expectTimes([Date.now() - start], [1], "Timing Results");
+                    expectTimes([end()], [1], "Timing Results");
                 });
             }),
         ).then(() => {
@@ -81,7 +82,7 @@ describe("Batcher", () => {
     it("Offset Batches", () => {
         // Runs two batches of requests, offset so the seconds starts while the first is half finished.
         // The second batch should start before the first finishes.
-        const start: number = Date.now();
+        const end = timeSpan();
         let runCount: number = 0;
         const batcher = new Batcher<number, string>({
             batchingFunction: (input) => {
@@ -97,7 +98,7 @@ describe("Batcher", () => {
                         input.map((value, index2) => {
                             return batcher.getResult(value).then((result) => {
                                 expect(result).to.equal(String(value));
-                                expectTimes([Date.now() - start], [index + 2], `Timing result (${index},${index2})`);
+                                expectTimes([end()], [index + 2], `Timing result (${index},${index2})`);
                             });
                         }),
                     ),
@@ -118,10 +119,10 @@ describe("Batcher", () => {
             maxBatchSize: 2,
         });
         const inputs = [1, 5, 9];
-        const start: number = Date.now();
+        const end = timeSpan();
         return Promise.all(
             inputs.map(() => {
-                return batcher.getResult(undefined).then(() => Date.now() - start);
+                return batcher.getResult(undefined).then(() => end());
             }),
         ).then((times) => {
             expectTimes(times, [1, 1, 2], "Timing Results");
@@ -139,12 +140,12 @@ describe("Batcher", () => {
                 maxBatchSize: 2,
             });
             const inputs = [1, 5, 9];
-            const start: number = Date.now();
+            const end = timeSpan();
             return Promise.all(
                 inputs.map((input) => {
                     return batcher.getResult(input).then((output) => {
                         expect(output).to.equal(String(input), "Outputs");
-                        expectTimes([Date.now() - start], [1], "Timing Results");
+                        expectTimes([end()], [1], "Timing Results");
                     });
                 }),
             ).then(() => {
@@ -182,12 +183,12 @@ describe("Batcher", () => {
             queuingDelay: tick * 2,
         });
         const delays = [0, 1, 3];
-        const start: number = Date.now();
+        const end = timeSpan();
         return Promise.all(
             delays.map((delay) => {
                 return wait(delay * tick)
                     .then(() => batcher.getResult(undefined))
-                    .then(() => Date.now() - start);
+                    .then(() => end());
             }),
         ).then((results) => {
             expectTimes(results, [2, 2, 5], "Timing Results");
@@ -205,12 +206,12 @@ describe("Batcher", () => {
                 queuingThresholds: [1, 2],
             });
             const delays = [0, 1, 2, 3, 4];
-            const start: number = Date.now();
+            const end = timeSpan();
             return Promise.all(
                 delays.map((delay) => {
                     return wait(delay * tick)
                         .then(() => batcher.getResult(undefined))
-                        .then(() => Date.now() - start);
+                        .then(() => end());
                 }),
             ).then((results) => {
                 expectTimes(results, [5, 7, 7, 9, 9], "Timing Results");
@@ -225,12 +226,12 @@ describe("Batcher", () => {
                 queuingThresholds: [1, 2],
             });
             const delays = [0, 1];
-            const start: number = Date.now();
+            const end = timeSpan();
             return Promise.all(
                 delays.map((delay) => {
                     return wait(delay * tick)
                         .then(() => batcher.getResult(undefined))
-                        .then(() => Date.now() - start);
+                        .then(() => end());
                 }),
             ).then((results) => {
                 expectTimes(results, [2, 4], "Timing Results");
@@ -246,14 +247,14 @@ describe("Batcher", () => {
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
             });
-            const start: number = Date.now();
+            const end = timeSpan();
             return Promise.all(
                 [
                     batcher.getResult(undefined).then(() => {
                         return batcher.getResult(undefined);
                     }),
                     wait(2 * tick).then(() => batcher.getResult(undefined)),
-                ].map((promise) => promise.then(() => Date.now() - start)),
+                ].map((promise) => promise.then(() => end())),
             ).then((results) => {
                 expectTimes(results, [8, 8], "Timing Results");
                 expect(runCount).to.equal(2, "runCount");
@@ -267,10 +268,10 @@ describe("Batcher", () => {
                 maxBatchSize: 1,
                 queuingThresholds: [1, Infinity],
             });
-            const start: number = Date.now();
+            const end = timeSpan();
             return Promise.all(
                 [batcher.getResult(undefined), batcher.getResult(undefined)].map((promise) =>
-                    promise.then(() => Date.now() - start),
+                    promise.then(() => end()),
                 ),
             ).then((results) => {
                 expectTimes(results, [1, 2], "Timing Results");
@@ -292,12 +293,12 @@ describe("Batcher", () => {
                     return inputs.map((input) => input + 1);
                 },
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2].map(async (input) => {
                     const output = await batcher.getResult(input);
                     expect(output).to.equal(input + 1, "getResult output");
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [2, 2], "Timing Results");
@@ -316,12 +317,12 @@ describe("Batcher", () => {
                     });
                 },
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2].map(async (input) => {
                     const output = await batcher.getResult(input);
                     expect(output).to.equal(input + 1, "getResult output");
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [2, 1], "Timing Results");
@@ -340,12 +341,12 @@ describe("Batcher", () => {
                 maxBatchSize: 3,
                 queuingThresholds: [1, Infinity],
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2, 3, 4].map(async (input) => {
                     const output = await batcher.getResult(input);
                     expect(output).to.equal(input + 1, "getResult output");
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [2, 2, 1, 2], "Timing Results");
@@ -364,7 +365,7 @@ describe("Batcher", () => {
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2, 3].map(async (_, index) => {
                     const promise = batcher.getResult(undefined);
@@ -374,7 +375,7 @@ describe("Batcher", () => {
                         expect(runCount).to.equal(1, "runCount after");
                     }
                     await promise;
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [1, 1, 3], "Timing Results");
@@ -390,7 +391,7 @@ describe("Batcher", () => {
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2, 3].map(async (_, index) => {
                     const promise = batcher.getResult(undefined);
@@ -403,7 +404,7 @@ describe("Batcher", () => {
                         expect(runCount).to.equal(1, "runCount after second");
                     }
                     await promise;
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [1, 1, 2], "Timing Results");
@@ -420,7 +421,7 @@ describe("Batcher", () => {
                 maxBatchSize: 2,
                 queuingThresholds: [1, Infinity],
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2, 3].map(async (_, index) => {
                     const promise = batcher.getResult(undefined);
@@ -428,7 +429,7 @@ describe("Batcher", () => {
                         batcher.send();
                     }
                     await promise;
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expectTimes(results, [2, 2, 4], "Timing Results");
@@ -445,7 +446,7 @@ describe("Batcher", () => {
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
             });
-            const start = Date.now();
+            const end = timeSpan();
             const results = await Promise.all(
                 [1, 2, 3].map(async (_, index) => {
                     const promise = batcher.getResult(undefined);
@@ -453,7 +454,7 @@ describe("Batcher", () => {
                         batcher.send();
                     }
                     await promise;
-                    return Date.now() - start;
+                    return end();
                 }),
             );
             expect(runCount).to.equal(2, "runCount");
