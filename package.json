@@ -18,7 +18,7 @@
         "prepare": "npm run build",
         "build": "npm run clean && npm run tsc",
         "clean": "rm -rf index.js index.d.ts test",
-        "test": "npm run lint && mocha --require ts-node/register ts/test/*.ts --colors",
+        "test": "npm run lint && nyc mocha --require ts-node/register ts/test/*.ts --colors",
         "test-debug": "cross-env DEBUG=promise-batcher* npm test",
         "tsc": "tsc",
         "lint": "tslint ts/**/*.ts"
