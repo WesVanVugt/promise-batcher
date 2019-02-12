@@ -3,6 +3,18 @@
     "editor.formatOnSave": true,
     "editor.tabSize": 4,
     "files.trimTrailingWhitespace": true,
+    "files.eol": "\n",
     "tslint.enable": true,
-    "tslint.autoFixOnSave": true
+    "tslint.autoFixOnSave": [
+        "ordered-imports"
+    ],
+    "prettier.tabWidth": 4,
+    "prettier.printWidth": 120,
+    "prettier.trailingComma": "all",
+    "prettier.arrowParens": "always",
+    "prettier.disableLanguages": [
+        "json",
+        "jsonc"
+    ],
+    "prettier.endOfLine": "lf",
 }

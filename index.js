@@ -1,8 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const Debug = require("debug");
-const defer = require("p-defer");
-const debug = Debug("promise-batcher");
+const debug_1 = __importDefault(require("debug"));
+const p_defer_1 = __importDefault(require("p-defer"));
+const debug = debug_1.default("promise-batcher");
 function isNull(val) {
     return val === undefined || val === null;
 }
@@ -28,11 +31,11 @@ class Batcher {
         this._delayFunction = options.delayFunction;
         if (Array.isArray(options.queuingThresholds)) {
             if (!options.queuingThresholds.length) {
-                throw new Error("options.batchThresholds must contain at least one number");
+                throw new Error("options.queuingThresholds must contain at least one number");
             }
             options.queuingThresholds.forEach((n) => {
                 if (n < 1) {
-                    throw new Error("options.batchThresholds must only contain numbers greater than 0");
+                    throw new Error("options.queuingThresholds must only contain numbers greater than 0");
                 }
             });
             this._queuingThresholds = options.queuingThresholds.slice();
@@ -42,7 +45,7 @@ class Batcher {
         }
         if (!isNull(options.maxBatchSize)) {
             if (options.maxBatchSize < 1) {
-                throw new Error("options.batchSize must be greater than 0");
+                throw new Error("options.maxBatchSize must be greater than 0");
             }
             this._maxBatchSize = options.maxBatchSize;
         }
@@ -60,7 +63,7 @@ class Batcher {
         const index = this._inputQueue.length;
         debug("Queuing request at index %O", index);
         this._inputQueue[index] = input;
-        const deferred = defer();
+        const deferred = p_defer_1.default();
         this._outputQueue[index] = deferred;
         this._trigger();
         return deferred.promise;
@@ -126,9 +129,11 @@ class Batcher {
             }
             if (!isNull(result)) {
                 const resultPromise = result instanceof Promise ? result : Promise.resolve(result);
-                resultPromise.then(() => {
+                resultPromise
+                    .then(() => {
                     this._runImmediately();
-                }).catch((err) => {
+                })
+                    .catch((err) => {
                     debug("Caught error in delayFunction. Rejecting promises.");
                     this._inputQueue.length = 0;
                     const promises = this._outputQueue.splice(0, this._outputQueue.length);
@@ -155,23 +160,22 @@ class Batcher {
         debug("Running batch of %O", inputs.length);
         let batchPromise;
         try {
-            batchPromise = this._batchingFunction.call(this, inputs);
-            if (!(batchPromise instanceof Promise)) {
-                batchPromise = Promise.resolve(batchPromise);
-            }
+            const batch = this._batchingFunction.call(this, inputs);
+            batchPromise = batch instanceof Promise ? batch : Promise.resolve(batch);
         }
         catch (err) {
             batchPromise = Promise.reject(err);
         }
         this._waiting = false;
         this._activePromiseCount++;
-        batchPromise.then((outputs) => {
+        batchPromise
+            .then((outputs) => {
             if (!Array.isArray(outputs)) {
-                throw new Error("Invalid type returned from batching function.");
+                throw new Error("batchingFunction must return an array");
             }
             debug("Promise resolved.");
             if (outputs.length !== outputPromises.length) {
-                throw new Error("Batching function output length does not equal the input length.");
+                throw new Error("batchingFunction output length does not equal the input length");
             }
             const retryInputs = [];
             const retryPromises = [];
@@ -196,11 +200,13 @@ class Batcher {
                 this._inputQueue.unshift(...retryInputs);
                 this._outputQueue.unshift(...retryPromises);
             }
-        }).catch((err) => {
+        })
+            .catch((err) => {
             outputPromises.forEach((promise) => {
                 promise.reject(err);
             });
-        }).then(() => {
+        })
+            .then(() => {
             this._activePromiseCount--;
             // Since we may be operating at a lower queuing threshold now, we should try run again
             this._trigger();
