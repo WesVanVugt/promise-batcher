@@ -31,11 +31,11 @@ class Batcher {
         this._delayFunction = options.delayFunction;
         if (Array.isArray(options.queuingThresholds)) {
             if (!options.queuingThresholds.length) {
-                throw new Error("options.batchThresholds must contain at least one number");
+                throw new Error("options.queuingThresholds must contain at least one number");
             }
             options.queuingThresholds.forEach((n) => {
                 if (n < 1) {
-                    throw new Error("options.batchThresholds must only contain numbers greater than 0");
+                    throw new Error("options.queuingThresholds must only contain numbers greater than 0");
                 }
             });
             this._queuingThresholds = options.queuingThresholds.slice();
@@ -45,7 +45,7 @@ class Batcher {
         }
         if (!isNull(options.maxBatchSize)) {
             if (options.maxBatchSize < 1) {
-                throw new Error("options.batchSize must be greater than 0");
+                throw new Error("options.maxBatchSize must be greater than 0");
             }
             this._maxBatchSize = options.maxBatchSize;
         }
@@ -171,11 +171,11 @@ class Batcher {
         batchPromise
             .then((outputs) => {
             if (!Array.isArray(outputs)) {
-                throw new Error("Invalid type returned from batching function.");
+                throw new Error("batchingFunction must return an array");
             }
             debug("Promise resolved.");
             if (outputs.length !== outputPromises.length) {
-                throw new Error("Batching function output length does not equal the input length.");
+                throw new Error("batchingFunction output length does not equal the input length");
             }
             const retryInputs = [];
             const retryPromises = [];

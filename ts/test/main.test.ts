@@ -4,7 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import Debug from "debug";
 import PromiseLikeClass from "promise-polyfill";
 import timeSpan from "time-span";
-import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "../index";
+import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "./imports";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
@@ -21,11 +21,11 @@ delete PromiseLikeClass.prototype.finally;
 /**
  * Milliseconds per tick.
  */
-const tick: number = 100;
+const tick: number = 60;
 /**
  * Milliseconds tolerance for tests above the target.
  */
-const tolerance: number = 60;
+const tolerance: number = 50;
 
 /**
  * Returns a promise which waits the specified amount of time before resolving.
@@ -64,7 +64,10 @@ beforeEach(() => {
     process.addListener("unhandledRejection", unhandledRejectionListener);
 });
 
-describe("Batcher", () => {
+describe("Batcher", function() {
+    // Timing can sometimes be inconsistent, so I allow retries
+    this.retries(2);
+
     it("Core Functionality", async () => {
         let runCount: number = 0;
         const batcher = new Batcher<number, string>({
