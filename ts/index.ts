@@ -2,19 +2,17 @@ import Debug from "debug";
 import defer, { DeferredPromise } from "p-defer";
 const debug = Debug("promise-batcher");
 
-function isNull(val: any): val is null | undefined | void {
+function isNull(val: unknown): val is null | undefined | void {
     return val === undefined || val === null;
 }
-
-export class BatcherToken {}
 
 /**
  * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
  * into the the head of the queue.
  */
-export const BATCHER_RETRY_TOKEN: BatcherToken = new BatcherToken();
+export const BATCHER_RETRY_TOKEN: unique symbol = Symbol("PromiseBatcher.BATCHER_RETRY_TOKEN");
 
-export type BatchingResult<T> = T | Error | BatcherToken;
+export type BatchingResult<T> = T | Error | typeof BATCHER_RETRY_TOKEN;
 
 export interface BatcherOptions<I, O> {
     /**
@@ -169,7 +167,7 @@ export class Batcher<I, O> {
             } catch (err) {
                 result = Promise.reject(err);
             }
-            if (!isNull(result)) {
+            if (result) {
                 const resultPromise = result instanceof Promise ? result : Promise.resolve(result);
                 resultPromise
                     .then(() => {
@@ -201,19 +199,21 @@ export class Batcher<I, O> {
             this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
         }
 
-        debug("Running batch of %O", inputs.length);
-        let batchPromise: Promise<Array<BatchingResult<O>>>;
-        try {
-            const batch = this._batchingFunction.call(this, inputs);
-            batchPromise = batch instanceof Promise ? batch : Promise.resolve(batch);
-        } catch (err) {
-            batchPromise = Promise.reject(err);
-        }
-
-        this._waiting = false;
-        this._activePromiseCount++;
-        batchPromise
-            .then((outputs) => {
+        // tslint:disable-next-line:no-floating-promises
+        (async () => {
+            try {
+                debug("Running batch of %O", inputs.length);
+                this._waiting = false;
+                this._activePromiseCount++;
+                let batchPromise: Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
+                try {
+                    batchPromise = this._batchingFunction.call(this, inputs);
+                } finally {
+                    // The batch has started. Trigger another batch if appropriate.
+                    this._trigger();
+                }
+                // tslint:disable-next-line:await-promise
+                const outputs = await batchPromise;
                 if (!Array.isArray(outputs)) {
                     throw new Error("batchingFunction must return an array");
                 }
@@ -242,18 +242,15 @@ export class Batcher<I, O> {
                     this._inputQueue.unshift(...retryInputs);
                     this._outputQueue.unshift(...retryPromises);
                 }
-            })
-            .catch((err) => {
+            } catch (err) {
                 outputPromises.forEach((promise) => {
                     promise.reject(err);
                 });
-            })
-            .then(() => {
+            } finally {
                 this._activePromiseCount--;
                 // Since we may be operating at a lower queuing threshold now, we should try run again
                 this._trigger();
-            });
-        // The batch has started. Trigger another batch if appropriate.
-        this._trigger();
+            }
+        })();
     }
 }

@@ -4,12 +4,12 @@ import chaiAsPromised from "chai-as-promised";
 import Debug from "debug";
 import PromiseLikeClass from "promise-polyfill";
 import timeSpan from "time-span";
-import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "./imports";
+import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatchingResult } from "./imports";
 const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Verify that the types needed can be imported
-const typingImportTest: BatcherOptions<any, any> | BatchingResult<any> | BatcherToken = undefined as any;
+const typingImportTest: BatcherOptions<undefined, undefined> | BatchingResult<undefined> = undefined;
 if (typingImportTest) {
     // do nothing
 }
@@ -53,10 +53,10 @@ function expectTimes(resultTimes: number[], targetTicks: number[], message: stri
 }
 
 // istanbul ignore next
-function unhandledRejectionListener(err: any) {
-    debug("unhandledRejectionListener: " + err.stack);
+function unhandledRejectionListener(err: unknown) {
+    debug("unhandledRejectionListener: " + (err as Error).stack);
     // Fail the test
-    throw new Error("UnhandledPromiseRejection: " + err.message);
+    throw new Error("UnhandledPromiseRejection: " + (err as Error).message);
 }
 
 beforeEach(() => {
@@ -312,7 +312,7 @@ describe("Batcher", function() {
                     await wait(tick);
                     batchNumber++;
                     if (batchNumber < 2) {
-                        return inputs.map(() => BATCHER_RETRY_TOKEN);
+                        return inputs.map((): typeof BATCHER_RETRY_TOKEN => BATCHER_RETRY_TOKEN);
                     }
                     return inputs.map((input) => input + 1);
                 },
@@ -465,7 +465,7 @@ describe("Batcher", function() {
                 batchingFunction: async (inputs) => {
                     runCount++;
                     await wait(tick);
-                    return runCount === 1 ? inputs.map(() => BATCHER_RETRY_TOKEN) : inputs;
+                    return runCount === 1 ? inputs.map((): typeof BATCHER_RETRY_TOKEN => BATCHER_RETRY_TOKEN) : inputs;
                 },
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
@@ -608,7 +608,7 @@ describe("Batcher", function() {
         it("Invalid Output Type", async () => {
             const batcher = new Batcher<number, undefined>({
                 batchingFunction: (_input) => {
-                    return "test" as any;
+                    return ("test" as unknown) as undefined[];
                 },
             });
 
@@ -646,7 +646,7 @@ describe("Batcher", function() {
             expect(
                 () =>
                     new Batcher({
-                        batchingFunction: 1 as any,
+                        batchingFunction: (1 as unknown) as () => [],
                         maxBatchSize: 0,
                     }),
             ).to.throw(/^options\.maxBatchSize must be greater than 0$/);
@@ -655,7 +655,7 @@ describe("Batcher", function() {
             expect(
                 () =>
                     new Batcher({
-                        batchingFunction: 1 as any,
+                        batchingFunction: (1 as unknown) as () => [],
                         queuingThresholds: [],
                     }),
             ).to.throw(/^options\.queuingThresholds must contain at least one number$/);
@@ -664,7 +664,7 @@ describe("Batcher", function() {
             expect(
                 () =>
                     new Batcher({
-                        batchingFunction: 1 as any,
+                        batchingFunction: (1 as unknown) as () => [],
                         queuingThresholds: [0],
                     }),
             ).to.throw(/^options.queuingThresholds must only contain numbers greater than 0$/);
@@ -673,7 +673,7 @@ describe("Batcher", function() {
             expect(
                 () =>
                     new Batcher({
-                        batchingFunction: 1 as any,
+                        batchingFunction: (1 as unknown) as () => [],
                         queuingDelay: -1,
                     }),
             ).to.throw(/^options.queuingDelay must be greater than or equal to 0$/);

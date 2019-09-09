@@ -21,12 +21,12 @@
         "test": "npm run lint && nyc mocha --require ts-node/register ts/test/*.ts --colors",
         "test-package": "npm pack && cd test-package && npm i && npm test",
         "test-debug": "cross-env DEBUG=promise-batcher* npm test",
-        "lint": "tslint ts/**/*.ts"
+        "lint": "tslint ts/**/*.ts -p ."
     },
     "main": "index.js",
     "typings": "index.d.ts",
     "engines": {
-        "node": ">=4.0.0"
+        "node": ">=8"
     },
     "files": [
         "index.js",
@@ -34,26 +34,24 @@
     ],
     "dependencies": {
         "debug": "^4.1.1",
-        "p-defer": "^1.0.0"
+        "p-defer": "^3.0.0"
     },
     "devDependencies": {
-        "@types/chai-as-promised": "^7.1.0",
-        "@types/debug": "^4.1.0",
-        "@types/mocha": "^5.2.5",
-        "@types/node": "^10.12.24",
-        "@types/p-defer": "^1.0.3",
-        "@types/promise-polyfill": "6.0.1",
-        "@types/time-span": "^2.0.0",
+        "@types/chai-as-promised": "^7.1.2",
+        "@types/debug": "^4.1.5",
+        "@types/mocha": "^5.2.7",
+        "@types/node": "^12.7.3",
+        "@types/promise-polyfill": "6.0.3",
         "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
-        "cross-env": "^5.2.0",
-        "mocha": "^5.2.0",
-        "nyc": "^13.2.0",
-        "promise-polyfill": "8.1.0",
-        "time-span": "^2.0.0",
-        "ts-node": "^8.0.2",
-        "tslint": "^5.12.1",
-        "typescript": "^3.3.3"
+        "cross-env": "^5.2.1",
+        "mocha": "^6.2.0",
+        "nyc": "^14.1.1",
+        "promise-polyfill": "^8.1.3",
+        "time-span": "^3.1.0",
+        "ts-node": "^8.3.0",
+        "tslint": "^5.19.0",
+        "typescript": "^3.6.2"
     },
     "license": "MIT",
     "nyc": {
