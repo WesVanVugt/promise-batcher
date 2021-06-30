@@ -18,14 +18,14 @@ export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.
      */
-    maxBatchSize?: number;
+    readonly maxBatchSize?: number;
     /**
      * The number of milliseconds to wait before running a batch of requests.
      *
      * This is used to allow time for the requests to queue up. Defaults to 1ms.
      * This delay does not apply if the limit set by options.maxBatchSize is reached.
      */
-    queuingDelay?: number;
+    readonly queuingDelay?: number;
     /**
      * An array containing the number of requests that must be queued in order to trigger a batch request at each level
      * of concurrency.
@@ -34,7 +34,7 @@ export interface BatcherOptions<I, O> {
      * and 5 queued requests when 1 (or more) batch requests are active. Defaults to [1]. Note that the delay imposed
      * by options.queuingDelay still applies when a batch request is triggered.
      */
-    queuingThresholds?: number[];
+    readonly queuingThresholds?: readonly number[];
     /**
      * A function which is passed an array of request values, returning a promise which resolves to an array of
      * response values.
@@ -42,24 +42,30 @@ export interface BatcherOptions<I, O> {
      * The request and response arrays must be of equal length. To reject an individual request, return an Error object
      * (or class which extends Error) at the corresponding element in the response array.
      */
-    batchingFunction(inputs: I[]): Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
+    readonly batchingFunction: (
+        this: Batcher<I, O>,
+        inputs: readonly I[],
+    ) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
     /**
      * A function which can delay a batch by returning a promise which resolves when the batch should be run.
      * If the function does not return a promise, no delay will be applied.
      */
-    delayFunction?(): PromiseLike<void> | undefined | null | void;
+    readonly delayFunction?: () => PromiseLike<void> | undefined | null | void;
 }
 
 // tslint:disable-next-line:max-classes-per-file
 export class Batcher<I, O> {
-    private _maxBatchSize: number = Infinity;
-    private _queuingDelay: number = 1;
-    private _queuingThresholds: number[];
-    private _inputQueue: I[] = [];
-    private _outputQueue: Array<DeferredPromise<O>> = [];
-    private _delayFunction?: () => PromiseLike<void> | undefined | null | void;
-    private _batchingFunction: (input: I[]) => Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
-    private _waitTimeout?: NodeJS.Timeout;
+    private readonly _maxBatchSize: number = Infinity;
+    private readonly _queuingDelay: number = 1;
+    private readonly _queuingThresholds: readonly number[];
+    private readonly _inputQueue: I[] = [];
+    private readonly _outputQueue: Array<DeferredPromise<O>> = [];
+    private readonly _delayFunction?: () => PromiseLike<void> | undefined | null | void;
+    private readonly _batchingFunction: (
+        this: this,
+        input: readonly I[],
+    ) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
+    private _waitTimeout?: ReturnType<typeof setTimeout>;
     private _waiting: boolean = false;
     private _activePromiseCount: number = 0;
     private _immediateCount: number = 0;
@@ -71,11 +77,11 @@ export class Batcher<I, O> {
             if (!options.queuingThresholds.length) {
                 throw new Error("options.queuingThresholds must contain at least one number");
             }
-            options.queuingThresholds.forEach((n) => {
+            for (const n of options.queuingThresholds) {
                 if (n < 1) {
                     throw new Error("options.queuingThresholds must only contain numbers greater than 0");
                 }
-            });
+            }
             this._queuingThresholds = options.queuingThresholds.slice();
         } else {
             this._queuingThresholds = [1];
@@ -127,7 +133,7 @@ export class Batcher<I, O> {
             return;
         }
         // Always obey the queuing threshold
-        const thresholdIndex: number = Math.min(this._activePromiseCount, this._queuingThresholds.length - 1);
+        const thresholdIndex = Math.min(this._activePromiseCount, this._queuingThresholds.length - 1);
         if (this._inputQueue.length < this._queuingThresholds[thresholdIndex]) {
             return;
         }
@@ -177,9 +183,9 @@ export class Batcher<I, O> {
                         debug("Caught error in delayFunction. Rejecting promises.");
                         this._inputQueue.length = 0;
                         const promises = this._outputQueue.splice(0, this._outputQueue.length);
-                        promises.forEach((promise) => {
+                        for (const promise of promises) {
                             promise.reject(err);
-                        });
+                        }
                         this._waiting = false;
                     });
                 return;
@@ -205,7 +211,7 @@ export class Batcher<I, O> {
                 debug("Running batch of %O", inputs.length);
                 this._waiting = false;
                 this._activePromiseCount++;
-                let batchPromise: Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
+                let batchPromise: ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
                 try {
                     batchPromise = this._batchingFunction.call(this, inputs);
                 } finally {
@@ -243,9 +249,9 @@ export class Batcher<I, O> {
                     this._outputQueue.unshift(...retryPromises);
                 }
             } catch (err) {
-                outputPromises.forEach((promise) => {
+                for (const promise of outputPromises) {
                     promise.reject(err);
-                });
+                }
             } finally {
                 this._activePromiseCount--;
                 // Since we may be operating at a lower queuing threshold now, we should try run again
