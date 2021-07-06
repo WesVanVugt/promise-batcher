@@ -1,23 +1,21 @@
-export declare class BatcherToken {
-}
 /**
  * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
  * into the the head of the queue.
  */
-export declare const BATCHER_RETRY_TOKEN: BatcherToken;
-export declare type BatchingResult<T> = T | Error | BatcherToken;
+export declare const BATCHER_RETRY_TOKEN: unique symbol;
+export declare type BatchingResult<T> = T | Error | typeof BATCHER_RETRY_TOKEN;
 export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.
      */
-    maxBatchSize?: number;
+    readonly maxBatchSize?: number;
     /**
      * The number of milliseconds to wait before running a batch of requests.
      *
      * This is used to allow time for the requests to queue up. Defaults to 1ms.
      * This delay does not apply if the limit set by options.maxBatchSize is reached.
      */
-    queuingDelay?: number;
+    readonly queuingDelay?: number;
     /**
      * An array containing the number of requests that must be queued in order to trigger a batch request at each level
      * of concurrency.
@@ -26,7 +24,7 @@ export interface BatcherOptions<I, O> {
      * and 5 queued requests when 1 (or more) batch requests are active. Defaults to [1]. Note that the delay imposed
      * by options.queuingDelay still applies when a batch request is triggered.
      */
-    queuingThresholds?: number[];
+    readonly queuingThresholds?: readonly number[];
     /**
      * A function which is passed an array of request values, returning a promise which resolves to an array of
      * response values.
@@ -34,21 +32,21 @@ export interface BatcherOptions<I, O> {
      * The request and response arrays must be of equal length. To reject an individual request, return an Error object
      * (or class which extends Error) at the corresponding element in the response array.
      */
-    batchingFunction(inputs: I[]): Array<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
+    readonly batchingFunction: (this: Batcher<I, O>, inputs: readonly I[]) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
     /**
      * A function which can delay a batch by returning a promise which resolves when the batch should be run.
      * If the function does not return a promise, no delay will be applied.
      */
-    delayFunction?(): PromiseLike<void> | undefined | null | void;
+    readonly delayFunction?: () => PromiseLike<void> | undefined | null | void;
 }
 export declare class Batcher<I, O> {
-    private _maxBatchSize;
-    private _queuingDelay;
-    private _queuingThresholds;
-    private _inputQueue;
-    private _outputQueue;
-    private _delayFunction?;
-    private _batchingFunction;
+    private readonly _maxBatchSize;
+    private readonly _queuingDelay;
+    private readonly _queuingThresholds;
+    private readonly _inputQueue;
+    private readonly _outputQueue;
+    private readonly _delayFunction?;
+    private readonly _batchingFunction;
     private _waitTimeout?;
     private _waiting;
     private _activePromiseCount;

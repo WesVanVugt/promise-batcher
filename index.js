@@ -3,20 +3,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const debug_1 = __importDefault(require("debug"));
+exports.Batcher = exports.BATCHER_RETRY_TOKEN = void 0;
 const p_defer_1 = __importDefault(require("p-defer"));
-const debug = debug_1.default("promise-batcher");
+const util_1 = __importDefault(require("util"));
+const debug = util_1.default.debuglog("promise-batcher");
 function isNull(val) {
     return val === undefined || val === null;
 }
-class BatcherToken {
-}
-exports.BatcherToken = BatcherToken;
 /**
  * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
  * into the the head of the queue.
  */
-exports.BATCHER_RETRY_TOKEN = new BatcherToken();
+exports.BATCHER_RETRY_TOKEN = Symbol("PromiseBatcher.BATCHER_RETRY_TOKEN");
 // tslint:disable-next-line:max-classes-per-file
 class Batcher {
     constructor(options) {
@@ -33,11 +31,11 @@ class Batcher {
             if (!options.queuingThresholds.length) {
                 throw new Error("options.queuingThresholds must contain at least one number");
             }
-            options.queuingThresholds.forEach((n) => {
+            for (const n of options.queuingThresholds) {
                 if (n < 1) {
                     throw new Error("options.queuingThresholds must only contain numbers greater than 0");
                 }
-            });
+            }
             this._queuingThresholds = options.queuingThresholds.slice();
         }
         else {
@@ -127,7 +125,7 @@ class Batcher {
             catch (err) {
                 result = Promise.reject(err);
             }
-            if (!isNull(result)) {
+            if (result) {
                 const resultPromise = result instanceof Promise ? result : Promise.resolve(result);
                 resultPromise
                     .then(() => {
@@ -137,9 +135,9 @@ class Batcher {
                     debug("Caught error in delayFunction. Rejecting promises.");
                     this._inputQueue.length = 0;
                     const promises = this._outputQueue.splice(0, this._outputQueue.length);
-                    promises.forEach((promise) => {
+                    for (const promise of promises) {
                         promise.reject(err);
-                    });
+                    }
                     this._waiting = false;
                 });
                 return;
@@ -157,62 +155,63 @@ class Batcher {
         if (this._immediateCount) {
             this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
         }
-        debug("Running batch of %O", inputs.length);
-        let batchPromise;
-        try {
-            const batch = this._batchingFunction.call(this, inputs);
-            batchPromise = batch instanceof Promise ? batch : Promise.resolve(batch);
-        }
-        catch (err) {
-            batchPromise = Promise.reject(err);
-        }
-        this._waiting = false;
-        this._activePromiseCount++;
-        batchPromise
-            .then((outputs) => {
-            if (!Array.isArray(outputs)) {
-                throw new Error("batchingFunction must return an array");
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        (async () => {
+            try {
+                debug("Running batch of %O", inputs.length);
+                this._waiting = false;
+                this._activePromiseCount++;
+                let batchPromise;
+                try {
+                    batchPromise = this._batchingFunction.call(this, inputs);
+                }
+                finally {
+                    // The batch has started. Trigger another batch if appropriate.
+                    this._trigger();
+                }
+                const outputs = await batchPromise;
+                if (!Array.isArray(outputs)) {
+                    throw new Error("batchingFunction must return an array");
+                }
+                debug("Promise resolved.");
+                if (outputs.length !== outputPromises.length) {
+                    throw new Error("batchingFunction output length does not equal the input length");
+                }
+                const retryInputs = [];
+                const retryPromises = [];
+                for (const [index, promise] of outputPromises.entries()) {
+                    const output = outputs[index];
+                    if (output === exports.BATCHER_RETRY_TOKEN) {
+                        retryInputs.push(inputs[index]);
+                        retryPromises.push(promise);
+                    }
+                    else if (output instanceof Error) {
+                        promise.reject(output);
+                    }
+                    else {
+                        promise.resolve(output);
+                    }
+                }
+                if (retryPromises.length) {
+                    debug("Adding %O requests to the queue to retry.", retryPromises.length);
+                    if (this._immediateCount) {
+                        this._immediateCount += retryPromises.length;
+                    }
+                    this._inputQueue.unshift(...retryInputs);
+                    this._outputQueue.unshift(...retryPromises);
+                }
             }
-            debug("Promise resolved.");
-            if (outputs.length !== outputPromises.length) {
-                throw new Error("batchingFunction output length does not equal the input length");
+            catch (err) {
+                for (const promise of outputPromises) {
+                    promise.reject(err);
+                }
             }
-            const retryInputs = [];
-            const retryPromises = [];
-            outputPromises.forEach((promise, index) => {
-                const output = outputs[index];
-                if (output === exports.BATCHER_RETRY_TOKEN) {
-                    retryInputs.push(inputs[index]);
-                    retryPromises.push(promise);
-                }
-                else if (output instanceof Error) {
-                    promise.reject(output);
-                }
-                else {
-                    promise.resolve(output);
-                }
-            });
-            if (retryPromises.length) {
-                debug("Adding %O requests to the queue to retry.", retryPromises.length);
-                if (this._immediateCount) {
-                    this._immediateCount += retryPromises.length;
-                }
-                this._inputQueue.unshift(...retryInputs);
-                this._outputQueue.unshift(...retryPromises);
+            finally {
+                this._activePromiseCount--;
+                // Since we may be operating at a lower queuing threshold now, we should try run again
+                this._trigger();
             }
-        })
-            .catch((err) => {
-            outputPromises.forEach((promise) => {
-                promise.reject(err);
-            });
-        })
-            .then(() => {
-            this._activePromiseCount--;
-            // Since we may be operating at a lower queuing threshold now, we should try run again
-            this._trigger();
-        });
-        // The batch has started. Trigger another batch if appropriate.
-        this._trigger();
+        })();
     }
 }
 exports.Batcher = Batcher;
