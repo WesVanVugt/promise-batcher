@@ -1,6 +1,7 @@
-import Debug from "debug";
 import defer, { DeferredPromise } from "p-defer";
-const debug = Debug("promise-batcher");
+import util from "util";
+
+const debug = util.debuglog("promise-batcher");
 
 function isNull(val: unknown): val is null | undefined | void {
     return val === undefined || val === null;

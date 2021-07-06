@@ -1,3 +1,6 @@
+[![GitHub Workflow](https://github.com/WesVanVugt/promise-batcher/actions/workflows/main.yml/badge.svg)](https://github.com/WesVanVugt/promise-batcher/actions/workflows/main.yml)
+[![Install Size](https://packagephobia.now.sh/badge?p=promise-batcher)](https://packagephobia.now.sh/badge?p=promise-batcher)
+
 # promise-batcher
 
 A module for batching individual promises to improve their collective efficiency.

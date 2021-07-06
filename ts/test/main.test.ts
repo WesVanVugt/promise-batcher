@@ -2,14 +2,14 @@ import FakeTimers from "@sinonjs/fake-timers";
 import chai from "chai";
 import { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
-import Debug from "debug";
 import PromiseLikeClass from "promise-polyfill";
 import timeSpan from "time-span";
 import { expectType, TypeEqual } from "ts-expect";
-import { promisify } from "util";
+import util from "util";
 import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatchingResult } from "./imports";
+
 const clock = FakeTimers.install();
-const debug = Debug("promise-batcher:test");
+const debug = util.debuglog("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Make the promise like the PromiseLike interface
@@ -26,7 +26,7 @@ const TICK = 100;
 /**
  * Returns a promise which waits the specified amount of time before resolving.
  */
-const wait = promisify(setTimeout);
+const wait = util.promisify(setTimeout);
 
 /**
  * Maximum number of timers to advance before giving up. This is used to prevent infinite loops.

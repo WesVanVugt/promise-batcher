@@ -4,9 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Batcher = exports.BATCHER_RETRY_TOKEN = void 0;
-const debug_1 = __importDefault(require("debug"));
 const p_defer_1 = __importDefault(require("p-defer"));
-const debug = debug_1.default("promise-batcher");
+const util_1 = __importDefault(require("util"));
+const debug = util_1.default.debuglog("promise-batcher");
 function isNull(val) {
     return val === undefined || val === null;
 }
