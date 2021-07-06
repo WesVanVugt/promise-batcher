@@ -6,7 +6,7 @@ module.exports = {
         project: ["./tsconfig.eslint.json"],
     },
     ignorePatterns: ["*.d.ts"],
-    plugins: ["@typescript-eslint"],
+    plugins: ["@typescript-eslint", "prettier"],
     extends: [
         "eslint:recommended",
         "plugin:@typescript-eslint/eslint-recommended",
@@ -14,9 +14,10 @@ module.exports = {
         "plugin:@typescript-eslint/recommended-requiring-type-checking",
     ],
     rules: {
-        "no-console": 2,
-        "no-sequences": 2,
         "@typescript-eslint/no-implicit-any-catch": 2,
         "@typescript-eslint/require-await": 0,
+        "no-console": 2,
+        "no-sequences": 2,
+        "prettier/prettier": "error",
     },
 };

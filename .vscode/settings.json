@@ -4,9 +4,4 @@
     "editor.tabSize": 4,
     "files.trimTrailingWhitespace": true,
     "files.eol": "\n",
-    "prettier.tabWidth": 4,
-    "prettier.printWidth": 120,
-    "prettier.trailingComma": "all",
-    "prettier.arrowParens": "always",
-    "prettier.endOfLine": "lf",
 }
