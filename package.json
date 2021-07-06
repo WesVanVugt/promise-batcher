@@ -15,8 +15,7 @@
     "author": "Wes van Vugt <wes.vanvugt@gmail.com>",
     "repository": "WesVanVugt/promise-batcher",
     "scripts": {
-        "prepare": "npm run build",
-        "build": "npm run clean && tsc",
+        "prepare": "npm run clean && tsc",
         "clean": "rm -rf index.js index.d.ts *.tgz",
         "test": "npm run lint && npm run test-local && npm run test-package",
         "test-local": "nyc mocha --colors --require ts-node/register ts/test/*.test.ts",
