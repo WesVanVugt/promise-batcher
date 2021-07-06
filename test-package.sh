@@ -10,4 +10,4 @@ npm i
 cp ../*.tgz package.tgz
 npm i package.tgz
 cp ../ts/test/*.test.ts ts/test/
-npm test
+npm run test-local

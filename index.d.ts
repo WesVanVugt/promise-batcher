@@ -32,7 +32,7 @@ export interface BatcherOptions<I, O> {
      * The request and response arrays must be of equal length. To reject an individual request, return an Error object
      * (or class which extends Error) at the corresponding element in the response array.
      */
-    readonly batchingFunction: (this: Batcher<I, O>, inputs: I[]) => ReadonlyArray<BatchingResult<O>> | PromiseLike<Array<BatchingResult<O>>>;
+    readonly batchingFunction: (this: Batcher<I, O>, inputs: readonly I[]) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
     /**
      * A function which can delay a batch by returning a promise which resolves when the batch should be run.
      * If the function does not return a promise, no delay will be applied.

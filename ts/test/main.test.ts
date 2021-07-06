@@ -13,9 +13,9 @@ const debug = Debug("promise-batcher:test");
 chai.use(chaiAsPromised);
 
 // Make the promise like the PromiseLike interface
-// @ts-expect-error
+// @ts-expect-error: deleting a required type
 delete PromiseLikeClass.prototype.catch;
-// @ts-expect-error
+// @ts-expect-error: deleting a required type
 delete PromiseLikeClass.prototype.finally;
 
 /**
@@ -56,7 +56,7 @@ async function fakeAwait<T>(promise: Promise<T>): Promise<T> {
         ]);
         done = true;
         return v;
-    } catch (err) {
+    } catch (err: unknown) {
         done = true;
         throw err;
     }
@@ -64,7 +64,7 @@ async function fakeAwait<T>(promise: Promise<T>): Promise<T> {
 
 // istanbul ignore next
 function unhandledRejectionListener(err: unknown) {
-    debug("unhandledRejectionListener: " + (err as Error).stack);
+    debug("unhandledRejectionListener: %O", (err as Error).stack);
     // Fail the test
     throw new Error("UnhandledPromiseRejection: " + (err as Error).message);
 }
@@ -76,7 +76,7 @@ beforeEach(() => {
 
 describe("Batcher", () => {
     it("Core Functionality", async () => {
-        let runCount: number = 0;
+        let runCount = 0;
         const batcher = new Batcher<number, string>({
             batchingFunction: async (input) => {
                 runCount++;
@@ -101,7 +101,7 @@ describe("Batcher", () => {
         // Runs two batches of requests, offset so the seconds starts while the first is half finished.
         // The second batch should start before the first finishes.
         const elapsed = timeSpan();
-        let runCount: number = 0;
+        let runCount = 0;
         const batcher = new Batcher<number, string>({
             batchingFunction: async (input) => {
                 runCount++;
@@ -130,7 +130,7 @@ describe("Batcher", () => {
         expect(runCount).to.equal(2, "runCount");
     });
     it("Delay Function", async () => {
-        let runCount: number = 0;
+        let runCount = 0;
         const batcher = new Batcher<undefined, undefined>({
             batchingFunction: async (input) => {
                 runCount++;
@@ -167,7 +167,7 @@ describe("Batcher", () => {
     });
     describe("maxBatchSize", () => {
         it("Core Functionality", async () => {
-            let runCount: number = 0;
+            let runCount = 0;
             const batcher = new Batcher<number, string>({
                 batchingFunction: async (input) => {
                     runCount++;
@@ -189,7 +189,7 @@ describe("Batcher", () => {
             expect(runCount).to.equal(2, "runCount");
         });
         it("Instant Start", async () => {
-            let runCount: number = 0;
+            let runCount = 0;
             const batcher = new Batcher<undefined, undefined>({
                 batchingFunction: async (input) => {
                     runCount++;
@@ -213,11 +213,11 @@ describe("Batcher", () => {
         });
     });
     it("queuingDelay", async () => {
-        let runCount: number = 0;
+        let runCount = 0;
         const batcher = new Batcher<undefined, undefined>({
             batchingFunction: async (input) => {
                 runCount++;
-                return new Array(input.length);
+                return new Array<undefined>(input.length);
             },
             queuingDelay: TICK * 2,
         });
@@ -242,7 +242,7 @@ describe("Batcher", () => {
                 batchingFunction: async (input) => {
                     runCount++;
                     await wait(5 * TICK);
-                    return new Array(input.length);
+                    return new Array<undefined>(input.length);
                 },
                 queuingThresholds: [1, 2],
             });
@@ -267,7 +267,7 @@ describe("Batcher", () => {
             const batcher = new Batcher<undefined, undefined>({
                 batchingFunction: async (input) => {
                     await wait(2 * TICK);
-                    return new Array(input.length);
+                    return new Array<undefined>(input.length);
                 },
                 queuingThresholds: [1, 2],
             });
@@ -285,12 +285,12 @@ describe("Batcher", () => {
             expect(results).to.deep.equal([2 * TICK + 1, 4 * TICK + 2], "Timing Results");
         });
         it("Delay After Hitting Queuing Threshold", async () => {
-            let runCount: number = 0;
+            let runCount = 0;
             const batcher = new Batcher<undefined, undefined>({
                 batchingFunction: async (input) => {
                     runCount++;
                     await wait(3 * TICK);
-                    return new Array(input.length);
+                    return new Array<undefined>(input.length);
                 },
                 queuingDelay: TICK,
                 queuingThresholds: [1, Infinity],
@@ -317,7 +317,7 @@ describe("Batcher", () => {
             const batcher = new Batcher<undefined, undefined>({
                 batchingFunction: async (input) => {
                     await wait(TICK);
-                    return new Array(input.length);
+                    return new Array<undefined>(input.length);
                 },
                 maxBatchSize: 1,
                 queuingThresholds: [1, Infinity],
@@ -555,8 +555,8 @@ describe("Batcher", () => {
                         try {
                             await batcher.getResult(input);
                             return true;
-                        } catch (err) {
-                            expect(err.message).to.equal("test");
+                        } catch (err: unknown) {
+                            expect((err as Error).message).to.equal("test");
                             return false;
                         }
                     }),
@@ -567,12 +567,10 @@ describe("Batcher", () => {
         it("Synchronous Batching Function Exception Followed By Success", async () => {
             const batcher = new Batcher<number, undefined>({
                 batchingFunction: (input) => {
-                    input.forEach((value) => {
-                        if (value === 0) {
-                            throw new Error("test");
-                        }
-                    });
-                    return wait(1).then(() => new Array(input.length));
+                    if (input.includes(0)) {
+                        throw new Error("test");
+                    }
+                    return wait(1).then(() => new Array<undefined>(input.length));
                 },
                 maxBatchSize: 2,
             });
@@ -584,8 +582,8 @@ describe("Batcher", () => {
                         try {
                             await batcher.getResult(input);
                             return true;
-                        } catch (err) {
-                            expect(err.message).to.equal("test");
+                        } catch (err: unknown) {
+                            expect((err as Error).message).to.equal("test");
                             return false;
                         }
                     }),
@@ -602,7 +600,7 @@ describe("Batcher", () => {
                             throw new Error("test");
                         }
                     });
-                    return new Array(input.length);
+                    return new Array<undefined>(input.length);
                 },
                 maxBatchSize: 2,
             });
@@ -669,7 +667,7 @@ describe("Batcher", () => {
         });
         it("Invalid Output Type", async () => {
             const batcher = new Batcher<number, undefined>({
-                batchingFunction: (_input) => {
+                batchingFunction: () => {
                     return "test" as unknown as undefined[];
                 },
             });
@@ -690,7 +688,7 @@ describe("Batcher", () => {
                 batchingFunction: async (input) => {
                     // Respond with an array larger than the input
                     await wait(1);
-                    return new Array(input.length + 1);
+                    return new Array<undefined>(input.length + 1);
                 },
             });
 
@@ -698,7 +696,7 @@ describe("Batcher", () => {
             await fakeAwait(
                 Promise.all(
                     inputs.map(async (input) => {
-                        expect(batcher.getResult(input)).to.be.rejectedWith(
+                        await expect(batcher.getResult(input)).to.be.rejectedWith(
                             Error,
                             /^batchingFunction output length does not equal the input length$/,
                         );

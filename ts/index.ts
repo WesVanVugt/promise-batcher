@@ -66,9 +66,9 @@ export class Batcher<I, O> {
         input: readonly I[],
     ) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
     private _waitTimeout?: ReturnType<typeof setTimeout>;
-    private _waiting: boolean = false;
-    private _activePromiseCount: number = 0;
-    private _immediateCount: number = 0;
+    private _waiting = false;
+    private _activePromiseCount = 0;
+    private _immediateCount = 0;
 
     constructor(options: BatcherOptions<I, O>) {
         this._batchingFunction = options.batchingFunction;
@@ -170,7 +170,7 @@ export class Batcher<I, O> {
             let result: void | PromiseLike<void> | null | undefined;
             try {
                 result = this._delayFunction();
-            } catch (err) {
+            } catch (err: unknown) {
                 result = Promise.reject(err);
             }
             if (result) {
@@ -179,7 +179,7 @@ export class Batcher<I, O> {
                     .then(() => {
                         this._runImmediately();
                     })
-                    .catch((err) => {
+                    .catch((err: unknown) => {
                         debug("Caught error in delayFunction. Rejecting promises.");
                         this._inputQueue.length = 0;
                         const promises = this._outputQueue.splice(0, this._outputQueue.length);
@@ -205,7 +205,7 @@ export class Batcher<I, O> {
             this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
         }
 
-        // tslint:disable-next-line:no-floating-promises
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         (async () => {
             try {
                 debug("Running batch of %O", inputs.length);
@@ -218,9 +218,8 @@ export class Batcher<I, O> {
                     // The batch has started. Trigger another batch if appropriate.
                     this._trigger();
                 }
-                // tslint:disable-next-line:await-promise
                 const outputs = await batchPromise;
-                if (!Array.isArray(outputs)) {
+                if (!(Array.isArray as (v: unknown) => v is readonly unknown[])(outputs)) {
                     throw new Error("batchingFunction must return an array");
                 }
                 debug("Promise resolved.");
@@ -229,7 +228,7 @@ export class Batcher<I, O> {
                 }
                 const retryInputs: I[] = [];
                 const retryPromises: Array<DeferredPromise<O>> = [];
-                outputPromises.forEach((promise, index) => {
+                for (const [index, promise] of outputPromises.entries()) {
                     const output = outputs[index];
                     if (output === BATCHER_RETRY_TOKEN) {
                         retryInputs.push(inputs[index]);
@@ -237,9 +236,9 @@ export class Batcher<I, O> {
                     } else if (output instanceof Error) {
                         promise.reject(output);
                     } else {
-                        promise.resolve(output as O);
+                        promise.resolve(output);
                     }
-                });
+                }
                 if (retryPromises.length) {
                     debug("Adding %O requests to the queue to retry.", retryPromises.length);
                     if (this._immediateCount) {
@@ -248,7 +247,7 @@ export class Batcher<I, O> {
                     this._inputQueue.unshift(...retryInputs);
                     this._outputQueue.unshift(...retryPromises);
                 }
-            } catch (err) {
+            } catch (err: unknown) {
                 for (const promise of outputPromises) {
                     promise.reject(err);
                 }

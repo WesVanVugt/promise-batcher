@@ -155,7 +155,7 @@ class Batcher {
         if (this._immediateCount) {
             this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
         }
-        // tslint:disable-next-line:no-floating-promises
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         (async () => {
             try {
                 debug("Running batch of %O", inputs.length);
@@ -169,7 +169,6 @@ class Batcher {
                     // The batch has started. Trigger another batch if appropriate.
                     this._trigger();
                 }
-                // tslint:disable-next-line:await-promise
                 const outputs = await batchPromise;
                 if (!Array.isArray(outputs)) {
                     throw new Error("batchingFunction must return an array");
@@ -180,7 +179,7 @@ class Batcher {
                 }
                 const retryInputs = [];
                 const retryPromises = [];
-                outputPromises.forEach((promise, index) => {
+                for (const [index, promise] of outputPromises.entries()) {
                     const output = outputs[index];
                     if (output === exports.BATCHER_RETRY_TOKEN) {
                         retryInputs.push(inputs[index]);
@@ -192,7 +191,7 @@ class Batcher {
                     else {
                         promise.resolve(output);
                     }
-                });
+                }
                 if (retryPromises.length) {
                     debug("Adding %O requests to the queue to retry.", retryPromises.length);
                     if (this._immediateCount) {
