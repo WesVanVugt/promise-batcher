@@ -125,15 +125,6 @@ A tool for combining requests.
   are set, this will result in the batchingFunction being run immediately. Note that batches will still be run even if
   this function is not called, once the queuingDelay or maxBatchSize is reached.
 
-#### Methods
-
-- batcher.**getResult**(input) - Returns a promise which resolves or rejects with the individual result returned from
-  the batching function.
-- batcher.**idlePromise**() - Returns a promise which resolves there are no pending batches.
-- batcher.**send**() - Bypasses any queuingDelay set, while respecting all other limits imposed. If no other limits
-  are set, this will result in the batchingFunction being run immediately. Note that batches will still be run even if
-  this function is not called, once the queuingDelay or maxBatchSize is reached.
-
 #### Properties
 
 - batcher.**idling** - `true` when there are no pending batches, and `false` otherwise.
