@@ -1,3 +1,2 @@
-*.test.ts
-package.json
-package-lock.json
+*
+!./ts/import.ts

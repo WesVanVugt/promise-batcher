@@ -48,8 +48,9 @@ export declare class Batcher<I, O> {
     private readonly _delayFunction?;
     private readonly _batchingFunction;
     private _waitTimeout?;
+    private _idlePromise?;
     private _waiting;
-    private _activePromiseCount;
+    private _activeBatchCount;
     private _immediateCount;
     constructor(options: BatcherOptions<I, O>);
     /**
@@ -72,4 +73,12 @@ export declare class Batcher<I, O> {
      * Runs the batch immediately without further delay
      */
     private _runImmediately;
+    /**
+     * `true` when there are no pending batches.
+     */
+    get idling(): boolean;
+    /**
+     * Returns a promise which resolves when `this.idling` is true.
+     */
+    idlePromise(): Promise<void>;
 }

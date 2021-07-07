@@ -165,7 +165,7 @@ describe("Batcher", () => {
         await fakeAwait(batcher.getResult(undefined));
         expect(elapsed()).to.equal(2 * TICK + 2, "Timing Results");
     });
-    describe("maxBatchSize", () => {
+    describe("options.maxBatchSize", () => {
         it("Core Functionality", async () => {
             let runCount = 0;
             const batcher = new Batcher<number, string>({
@@ -212,7 +212,7 @@ describe("Batcher", () => {
             );
         });
     });
-    it("queuingDelay", async () => {
+    it("options.queuingDelay", async () => {
         let runCount = 0;
         const batcher = new Batcher<undefined, undefined>({
             batchingFunction: async (input) => {
@@ -235,7 +235,7 @@ describe("Batcher", () => {
         expect(results).to.deep.equal([2 * TICK, 2 * TICK, 5 * TICK], "Timing Results");
         expect(runCount).to.equal(2, "runCount");
     });
-    describe("queueingThresholds", () => {
+    describe("options.queuingThresholds", () => {
         it("Core Functionality", async () => {
             let runCount = 0;
             const batcher = new Batcher<undefined, undefined>({
@@ -421,7 +421,7 @@ describe("Batcher", () => {
             );
         });
     });
-    describe("Send Method", () => {
+    describe(".prototype.send", () => {
         it("Single Use", async () => {
             let runCount = 0;
             const batcher = new Batcher<undefined, undefined>({
@@ -535,6 +535,31 @@ describe("Batcher", () => {
             );
             expect(runCount).to.equal(2, "runCount");
             expect(results).to.deep.equal([2 * TICK, 2 * TICK, 2 * TICK], "Timing Results");
+        });
+    });
+    describe(".prototype.idlePromise", () => {
+        it("Nothing queued", async () => {
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => inputs,
+            });
+            await batcher.idlePromise();
+        });
+        it("Waits for batches", async () => {
+            const batcher = new Batcher<undefined, undefined>({
+                batchingFunction: async (inputs) => {
+                    await wait(TICK);
+                    return inputs;
+                },
+                maxBatchSize: 1,
+                queuingThresholds: [1, 9],
+            });
+            const elapsed = timeSpan();
+            expect(batcher.idling).eq(true);
+            void batcher.getResult(undefined);
+            expect(batcher.idling).eq(false);
+            await fakeAwait(Promise.all([batcher.idlePromise(), batcher.idlePromise(), batcher.getResult(undefined)]));
+            expect(batcher.idling).eq(true);
+            expect(elapsed()).eq(2 * TICK);
         });
     });
     describe("Error Handling", () => {

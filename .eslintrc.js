@@ -18,6 +18,6 @@ module.exports = {
         "@typescript-eslint/require-await": 0,
         "no-console": 2,
         "no-sequences": 2,
-        "prettier/prettier": "error",
+        "prettier/prettier": 2,
     },
 };

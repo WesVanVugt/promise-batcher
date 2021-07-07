@@ -67,8 +67,9 @@ export class Batcher<I, O> {
         input: readonly I[],
     ) => ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
     private _waitTimeout?: ReturnType<typeof setTimeout>;
+    private _idlePromise?: DeferredPromise<void>;
     private _waiting = false;
-    private _activePromiseCount = 0;
+    private _activeBatchCount = 0;
     private _immediateCount = 0;
 
     constructor(options: BatcherOptions<I, O>) {
@@ -134,8 +135,12 @@ export class Batcher<I, O> {
             return;
         }
         // Always obey the queuing threshold
-        const thresholdIndex = Math.min(this._activePromiseCount, this._queuingThresholds.length - 1);
+        const thresholdIndex = Math.min(this._activeBatchCount, this._queuingThresholds.length - 1);
         if (this._inputQueue.length < this._queuingThresholds[thresholdIndex]) {
+            if (this._idlePromise && this.idling) {
+                this._idlePromise.resolve();
+                this._idlePromise = undefined;
+            }
             return;
         }
         // If the queue has reached the maximum batch size, start it immediately
@@ -211,7 +216,7 @@ export class Batcher<I, O> {
             try {
                 debug("Running batch of %O", inputs.length);
                 this._waiting = false;
-                this._activePromiseCount++;
+                this._activeBatchCount++;
                 let batchPromise: ReadonlyArray<BatchingResult<O>> | PromiseLike<ReadonlyArray<BatchingResult<O>>>;
                 try {
                     batchPromise = this._batchingFunction.call(this, inputs);
@@ -253,10 +258,30 @@ export class Batcher<I, O> {
                     promise.reject(err);
                 }
             } finally {
-                this._activePromiseCount--;
+                this._activeBatchCount--;
                 // Since we may be operating at a lower queuing threshold now, we should try run again
                 this._trigger();
             }
         })();
+    }
+
+    /**
+     * `true` when there are no pending batches, and `false` otherwise.
+     */
+    public get idling(): boolean {
+        return this._activeBatchCount <= 0 && this._inputQueue.length <= 0;
+    }
+
+    /**
+     * Returns a promise which resolves there are no pending batches.
+     */
+    public async idlePromise(): Promise<void> {
+        if (this.idling) {
+            return;
+        }
+        if (!this._idlePromise) {
+            this._idlePromise = defer();
+        }
+        return this._idlePromise.promise;
     }
 }
