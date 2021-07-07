@@ -10,12 +10,7 @@ const debug = util_1.default.debuglog("promise-batcher");
 function isNull(val) {
     return val === undefined || val === null;
 }
-/**
- * If this token is returned in the results from a batchingFunction, the corresponding requests will be placed back
- * into the the head of the queue.
- */
 exports.BATCHER_RETRY_TOKEN = Symbol("PromiseBatcher.BATCHER_RETRY_TOKEN");
-// tslint:disable-next-line:max-classes-per-file
 class Batcher {
     constructor(options) {
         this._maxBatchSize = Infinity;
@@ -23,7 +18,7 @@ class Batcher {
         this._inputQueue = [];
         this._outputQueue = [];
         this._waiting = false;
-        this._activePromiseCount = 0;
+        this._activeBatchCount = 0;
         this._immediateCount = 0;
         this._batchingFunction = options.batchingFunction;
         this._delayFunction = options.delayFunction;
@@ -54,9 +49,6 @@ class Batcher {
             this._queuingDelay = options.queuingDelay;
         }
     }
-    /**
-     * Returns a promise which resolves or rejects with the individual result returned from the batching function.
-     */
     getResult(input) {
         const index = this._inputQueue.length;
         debug("Queuing request at index %O", index);
@@ -66,30 +58,23 @@ class Batcher {
         this._trigger();
         return deferred.promise;
     }
-    /**
-     * Triggers a batch to run, bypassing the queuingDelay while respecting other imposed delays.
-     */
     send() {
         debug("Send triggered.");
-        // no inputs?
-        // delayed?
         this._immediateCount = this._inputQueue.length;
         this._trigger();
     }
-    /**
-     * Triggers a batch to run, adhering to the maxBatchSize, queueingThresholds, and queuingDelay
-     */
     _trigger() {
-        // If the batch is set to run immediately, there is nothing more to be done
         if (this._waiting && !this._waitTimeout) {
             return;
         }
-        // Always obey the queuing threshold
-        const thresholdIndex = Math.min(this._activePromiseCount, this._queuingThresholds.length - 1);
+        const thresholdIndex = Math.min(this._activeBatchCount, this._queuingThresholds.length - 1);
         if (this._inputQueue.length < this._queuingThresholds[thresholdIndex]) {
+            if (this._idlePromise && this.idling) {
+                this._idlePromise.resolve();
+                this._idlePromise = undefined;
+            }
             return;
         }
-        // If the queue has reached the maximum batch size, start it immediately
         if (this._inputQueue.length >= this._maxBatchSize || this._immediateCount) {
             debug("Running immediately.");
             if (this._waitTimeout) {
@@ -103,19 +88,13 @@ class Batcher {
         if (this._waiting) {
             return;
         }
-        // Run the batch, but with a delay
         this._waiting = true;
         debug("Running in %Oms (thresholdIndex %O).", this._queuingDelay, thresholdIndex);
-        // Tests showed that nextTick would commonly run before promises could resolve.
-        // SetImmediate would run later than setTimeout as well.
         this._waitTimeout = setTimeout(() => {
             this._waitTimeout = undefined;
             this._run();
         }, this._queuingDelay);
     }
-    /**
-     * Runs the batch, while respecting delays imposed by the supplied delayFunction
-     */
     _run() {
         if (this._delayFunction) {
             let result;
@@ -146,27 +125,22 @@ class Batcher {
         }
         this._runImmediately();
     }
-    /**
-     * Runs the batch immediately without further delay
-     */
     _runImmediately() {
         const inputs = this._inputQueue.splice(0, this._maxBatchSize);
         const outputPromises = this._outputQueue.splice(0, this._maxBatchSize);
         if (this._immediateCount) {
             this._immediateCount = Math.max(0, this._immediateCount - inputs.length);
         }
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         (async () => {
             try {
                 debug("Running batch of %O", inputs.length);
                 this._waiting = false;
-                this._activePromiseCount++;
+                this._activeBatchCount++;
                 let batchPromise;
                 try {
                     batchPromise = this._batchingFunction.call(this, inputs);
                 }
                 finally {
-                    // The batch has started. Trigger another batch if appropriate.
                     this._trigger();
                 }
                 const outputs = await batchPromise;
@@ -207,11 +181,22 @@ class Batcher {
                 }
             }
             finally {
-                this._activePromiseCount--;
-                // Since we may be operating at a lower queuing threshold now, we should try run again
+                this._activeBatchCount--;
                 this._trigger();
             }
         })();
+    }
+    get idling() {
+        return this._activeBatchCount <= 0 && this._inputQueue.length <= 0;
+    }
+    async idlePromise() {
+        if (this.idling) {
+            return;
+        }
+        if (!this._idlePromise) {
+            this._idlePromise = p_defer_1.default();
+        }
+        return this._idlePromise.promise;
     }
 }
 exports.Batcher = Batcher;

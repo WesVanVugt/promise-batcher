@@ -15,12 +15,12 @@
     "author": "Wes van Vugt <wes.vanvugt@gmail.com>",
     "repository": "WesVanVugt/promise-batcher",
     "scripts": {
-        "prepare": "npm run clean && tsc",
+        "prepare": "npm run clean && tsc && tsc -p ./tsconfig.nocomments.json",
         "clean": "rm -rf index.js index.d.ts *.tgz",
-        "test": "npm run lint && npm run test-local && npm run test-package",
-        "test-local": "nyc mocha --colors --require ts-node/register ts/test/*.test.ts",
-        "test-package": "bash test-package.sh",
-        "test-debug": "cross-env NODE_DEBUG=promise-batcher npm run test-local",
+        "test": "npm run lint && npm run test:local && npm run test:package",
+        "test:local": "nyc mocha --colors --require ts-node/register ts/test/*.test.ts",
+        "test:package": "bash test-package.sh",
+        "test:debug": "cross-env NODE_DEBUG=promise-batcher npm run test:local",
         "lint": "eslint --color --max-warnings 0 --ext .ts ."
     },
     "main": "index.js",
@@ -58,10 +58,6 @@
         "ts-node": "^10.0.0",
         "typescript": "^4.3.5"
     },
-    "license": "MIT",
-    "nyc": {
-        "extension": [
-            ".ts"
-        ]
-    }
+    "sideEffects": false,
+    "license": "MIT"
 }
