@@ -74,11 +74,11 @@ export declare class Batcher<I, O> {
      */
     private _runImmediately;
     /**
-     * `true` when there are no pending batches.
+     * `true` when there are no pending batches, and `false` otherwise.
      */
     get idling(): boolean;
     /**
-     * Returns a promise which resolves when `this.idling` is true.
+     * Returns a promise which resolves there are no pending batches.
      */
     idlePromise(): Promise<void>;
 }
