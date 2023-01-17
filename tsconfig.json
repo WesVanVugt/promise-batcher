@@ -1,22 +1,18 @@
 {
-  "compileOnSave": true,
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2020",
     "module": "commonjs",
-    "strict": true,
     "declaration": true,
+    "strict": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "newLine": "LF",
-    "outDir": ".",
-    "lib": [
-      "es2017"
-    ],
+    "moduleResolution": "node",
+    "outDir": "."
   },
   "include": [
     "**/*"
   ],
-  "exclude": [],
+  "exclude": []
 }
