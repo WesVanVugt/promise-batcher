@@ -1,7 +1,7 @@
 {
-    "extends": "./tsconfig.build.json",
-    "compilerOptions": {
-        "declaration": false,
-        "removeComments": true
-    }
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "declaration": false,
+    "removeComments": true
+  }
 }
