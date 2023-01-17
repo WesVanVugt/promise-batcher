@@ -1,7 +1,10 @@
 {
     "extends": "./tsconfig.json",
     "include": [
+        "./.*.js",
+        "./*.js",
         "./ts/**/*.ts",
-        "./test-package/**/*.ts"
+        "./test-package/**/*.ts",
+        "./!index.js",
     ]
 }

@@ -1,11 +1,14 @@
-module.exports = {
+// @ts-check
+/** @type {import("eslint").Linter.Config} */
+const config = {
     root: true,
+    env: { node: true },
     parser: "@typescript-eslint/parser",
     parserOptions: {
         tsconfigRootDir: __dirname,
         project: ["./tsconfig.eslint.json"],
     },
-    ignorePatterns: ["*.d.ts", "/test-package/**/*"],
+    ignorePatterns: ["*.d.ts"],
     plugins: ["@typescript-eslint", "prettier"],
     extends: [
         "eslint:recommended",
@@ -28,3 +31,4 @@ module.exports = {
         "prettier/prettier": 2,
     },
 };
+module.exports = config;

@@ -13,10 +13,10 @@
         "outDir": ".",
         "lib": [
             "es2017"
-        ]
+        ],
     },
     "include": [
-        "ts/index.ts"
+        "**/*"
     ],
-    "exclude": []
+    "exclude": [],
 }

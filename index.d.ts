@@ -3,7 +3,7 @@
  * into the the head of the queue.
  */
 export declare const BATCHER_RETRY_TOKEN: unique symbol;
-export declare type BatchingResult<T> = T | Error | typeof BATCHER_RETRY_TOKEN;
+export type BatchingResult<T> = T | Error | typeof BATCHER_RETRY_TOKEN;
 export interface BatcherOptions<I, O> {
     /**
      * The maximum number of requests that can be combined in a single batch.
