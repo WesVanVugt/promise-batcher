@@ -1,5 +1,10 @@
 # Changelog for promise-batcher
 
+## 1.1.1 (2023-01-16)
+
+- misc: Changed indentation to 2 spaces.
+- misc: Updated dev dependency versions.
+
 ## 1.1.0 (2021-07-06)
 
 - feature: Added idlePromise method.

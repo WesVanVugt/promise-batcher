@@ -53,7 +53,7 @@ class Batcher {
         const index = this._inputQueue.length;
         debug("Queuing request at index %O", index);
         this._inputQueue[index] = input;
-        const deferred = p_defer_1.default();
+        const deferred = (0, p_defer_1.default)();
         this._outputQueue[index] = deferred;
         this._trigger();
         return deferred.promise;
@@ -194,7 +194,7 @@ class Batcher {
             return;
         }
         if (!this._idlePromise) {
-            this._idlePromise = p_defer_1.default();
+            this._idlePromise = (0, p_defer_1.default)();
         }
         return this._idlePromise.promise;
     }

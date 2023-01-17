@@ -1,4 +1,3 @@
 node_modules/
 *.tgz
-.nyc_output
 coverage
