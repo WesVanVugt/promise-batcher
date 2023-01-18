@@ -1,18 +1,13 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "declaration": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "outDir": "."
-  },
-  "include": [
-    "**/*"
-  ],
-  "exclude": []
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "@tsconfig/node14/tsconfig.json",
+	"compilerOptions": {
+		"declaration": true,
+		"newLine": "lf",
+		"outDir": "."
+	},
+	"include": [
+		"**/*"
+	],
+	"exclude": []
 }

@@ -1,10 +1,11 @@
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.detectIndentation": false,
-  "editor.formatOnSave": true,
-  "editor.tabSize": 2,
-  "files.trimTrailingWhitespace": true,
-  "[json]": {
-    "editor.defaultFormatter": "vscode.json-language-features"
-  }
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.detectIndentation": false,
+	"editor.formatOnSave": true,
+	"editor.tabSize": 2,
+	"editor.useTabStops": true,
+	"files.trimTrailingWhitespace": true,
+	"[json]": {
+		"editor.defaultFormatter": "vscode.json-language-features"
+	},
 }
